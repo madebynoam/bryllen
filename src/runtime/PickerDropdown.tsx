@@ -12,6 +12,7 @@ interface PickerDropdownProps<T> {
   triggerPrefix?: ReactNode
   width?: number
   forceOpen?: boolean
+  footer?: ReactNode
 }
 
 export function PickerDropdown<T>({
@@ -23,6 +24,7 @@ export function PickerDropdown<T>({
   triggerPrefix,
   width = 220,
   forceOpen = false,
+  footer,
 }: PickerDropdownProps<T>) {
   const { open, setOpen, containerRef } = useMenu({ forceOpen })
   const [triggerHovered, setTriggerHovered] = useState(false)
@@ -80,6 +82,11 @@ export function PickerDropdown<T>({
               </MenuRow>
             )
           })}
+          {footer && (
+            <div style={{ borderTop: `1px solid ${N.border}`, marginTop: S.xs, paddingTop: S.xs }}>
+              {footer}
+            </div>
+          )}
         </MenuPanel>
       )}
     </div>

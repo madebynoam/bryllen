@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { ProjectPicker } from './ProjectPicker'
 import { PickerDropdown } from './PickerDropdown'
 import { AnnotationPanelWidget } from './AnnotationPanel'
 import { PanelLeft, Plus } from 'lucide-react'
+import { MenuRow } from './Menu'
 import { N, S, R, T, ICON, FONT } from './tokens'
 import type { IterationManifest } from './types'
 
@@ -24,31 +24,6 @@ function SidebarIcon() {
   return <PanelLeft size={ICON.lg} strokeWidth={1.5} />
 }
 
-function NewIterationButton({ onClick }: { onClick: () => void }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title="New iteration"
-      style={{
-        width: S.xxl,
-        height: S.xxl,
-        border: 'none',
-        background: hovered ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: N.txtTer,
-        borderRadius: R.control,
-        cursor: 'default',
-      }}
-    >
-      <Plus size={ICON.md} strokeWidth={1.5} />
-    </button>
-  )
-}
 
 export function TopBar({
   projects,
@@ -118,13 +93,12 @@ export function TopBar({
                   {item.name}
                 </span>
               )}
-              renderRow={(item, _i, isActive) => (
+              renderRow={(item) => (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{
                     fontSize: T.body,
                     fontWeight: 500,
                     color: N.txtPri,
-                    textWrap: 'pretty',
                   }}>
                     {item.name}
                   </span>
@@ -133,19 +107,27 @@ export function TopBar({
                       fontSize: T.caption,
                       fontWeight: 400,
                       color: N.txtTer,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      lineHeight: '1.4',
                     }}>
                       {item.description}
                     </span>
                   )}
                 </div>
               )}
+              footer={import.meta.env.DEV && onNewIteration ? (
+                <MenuRow
+                  onClick={onNewIteration}
+                  icon={<Plus size={ICON.md} strokeWidth={1.5} color={N.txtTer} />}
+                  style={{ padding: `${S.sm}px ${S.sm}px`, fontSize: T.body, color: N.txtSec }}
+                >
+                  New Iteration
+                </MenuRow>
+              ) : undefined}
             />
-            {import.meta.env.DEV && onNewIteration && (
-              <NewIterationButton onClick={onNewIteration} />
-            )}
           </>
         )}
       </div>
