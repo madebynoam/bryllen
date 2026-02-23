@@ -1,9 +1,9 @@
 ---
-name: canvai-dev
+name: canvai-design
 description: Start (or restart) the Canvai dev server
 ---
 
-# /canvai-dev
+# /canvai-design
 
 Start the Canvai dev server and enter watch mode.
 
@@ -11,13 +11,13 @@ Start the Canvai dev server and enter watch mode.
 
 1. **Kill any existing canvai/vite processes** to avoid port conflicts:
    ```bash
-   pkill -f "canvai dev" 2>/dev/null; pkill -f "vite" 2>/dev/null; pkill -f "http-server.js" 2>/dev/null
+   pkill -f "canvai design" 2>/dev/null; pkill -f "vite" 2>/dev/null; pkill -f "http-server.js" 2>/dev/null
    ```
    It's fine if these fail (nothing was running).
 
 2. **Start the dev server** in the background:
    ```bash
-   npx canvai dev
+   npx canvai design
    ```
 
 3. **Confirm:** "Dev server running. Canvas at http://localhost:5173"

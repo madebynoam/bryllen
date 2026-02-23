@@ -8,14 +8,14 @@ Canvai gives designers a Figma-like infinite canvas where every iteration is cod
 
 Canvai is two pieces in one repo:
 
-- **npm package** (`src/runtime/`, `src/vite-plugin/`, `src/cli/`) — the canvas runtime, manifest auto-discovery, and `canvai dev` CLI
+- **npm package** (`src/runtime/`, `src/vite-plugin/`, `src/cli/`) — the canvas runtime, manifest auto-discovery, and `canvai design` CLI
 - **Claude Code plugin** (`plugin/`) — skills, Agentation MCP config, and agent instructions
 
 The designer's repo only contains `src/projects/` with components and manifests. Everything else comes from the package.
 
 ## How it works
 
-1. **`/canvai-init button`** — Creates a project, installs canvai, starts dev server + Agentation MCP
+1. **`/canvai-new button`** — Creates a project, installs canvai, starts dev server + Agentation MCP
 2. **Describe** — Tell the agent what to build. It generates a component + manifest with every variation × state as a grid
 3. **Annotate** — Use Agentation in the browser. The MCP feeds structured feedback to the agent
 4. **`/canvai-iterate`** — Creates a new page (version) in the manifest. Old versions stay frozen
@@ -38,10 +38,10 @@ The designer's repo only contains `src/projects/` with components and manifests.
 - Watches for new/removed manifests and triggers HMR
 
 ### CLI (`src/cli/`)
-- `canvai dev` — starts Vite + Agentation MCP in one process
+- `canvai design` — starts Vite + Agentation MCP in one process
 
 ### Plugin (`plugin/`)
-- Skills: `/canvai-init`, `/canvai-iterate`, `/canvai-ship`
+- Skills: `/canvai-new`, `/canvai-iterate`, `/canvai-ship`
 - MCP config for Agentation
 - CLAUDE.md agent instructions for manifest workflow
 

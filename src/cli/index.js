@@ -93,14 +93,14 @@ function scaffold() {
     })
     install.on('exit', (code) => {
       if (code === 0) {
-        console.log('\nReady! Run `npx canvai dev` to start.')
+        console.log('\nReady! Run `npx canvai design` to start.')
       } else {
         console.error('\nnpm install failed. Install manually and try again.')
       }
       process.exit(code ?? 0)
     })
   } else {
-    console.log('\nReady! Run `npx canvai dev` to start.')
+    console.log('\nReady! Run `npx canvai design` to start.')
   }
 }
 
@@ -128,7 +128,7 @@ function update() {
         stdio: 'inherit',
       })
       migrate.on('exit', () => {
-        console.log('\nUpdated! Restart `npx canvai dev` to use the latest.')
+        console.log('\nUpdated! Restart `npx canvai design` to use the latest.')
         process.exit(0)
       })
     } else {
@@ -182,10 +182,10 @@ function startDev() {
 }
 
 switch (command) {
-  case 'init':
+  case 'new':
     scaffold()
     break
-  case 'dev':
+  case 'design':
     startDev()
     break
   case 'update':
@@ -208,8 +208,8 @@ switch (command) {
   default:
     console.log('Canvai — design studio on an infinite canvas\n')
     console.log('Usage:')
-    console.log('  canvai init      Scaffold project files')
-    console.log('  canvai dev       Start dev server + annotation server')
+    console.log('  canvai new       Scaffold project files')
+    console.log('  canvai design    Start dev server + annotation server')
     console.log('  canvai update    Update canvai to latest')
     console.log('  canvai doctor    Check and fix project files')
     console.log('  canvai help      Show this message')

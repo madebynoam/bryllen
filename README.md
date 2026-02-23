@@ -29,7 +29,7 @@ Restart your Claude Code session for the plugin to activate.
 Open Claude Code in any directory and run:
 
 ```
-/canvai-init my-component
+/canvai-new my-component
 ```
 
 This will:
@@ -64,8 +64,8 @@ Run `/canvai-update` inside a Claude Code session to update both the npm package
 
 | Skill | Description |
 |---|---|
-| `/canvai-init <name>` | Create a new design project |
-| `/canvai-dev` | Start the dev server (chat mode) |
+| `/canvai-new <name>` | Create a new design project |
+| `/canvai-design` | Start the dev server (chat mode) |
 | `/canvai-watch` | Enter watch mode for rapid annotations |
 | `/canvai-iterate` | Create a new design iteration |
 | `/canvai-share` | Build and deploy to GitHub Pages for sharing |
@@ -75,8 +75,8 @@ Run `/canvai-update` inside a Claude Code session to update both the npm package
 ## CLI
 
 ```bash
-npx canvai init      # Scaffold project files and install dependencies
-npx canvai dev       # Start Vite dev server + annotation HTTP server
+npx canvai new       # Scaffold project files and install dependencies
+npx canvai design    # Start Vite dev server + annotation HTTP server
 npx canvai update    # Update canvai npm package to latest
 ```
 
@@ -116,7 +116,7 @@ export default manifest
 
 ## Architecture
 
-- **npm package** — canvas runtime, Vite plugin, and CLI (`canvai init`, `canvai dev`)
+- **npm package** — canvas runtime, Vite plugin, and CLI (`canvai new`, `canvai design`)
 - **Claude Code plugin** — skills, MCP config, and agent instructions
 
 ## Development
@@ -133,7 +133,7 @@ npm install
 
 1. Edit files in `src/runtime/`, `src/cli/`, `src/vite-plugin/`
 2. Run `npm test` to verify the export contract
-3. Dogfood with `canvai-ui` — run `npx canvai dev` from the repo root, changes reflect via HMR
+3. Dogfood with `canvai-ui` — run `npx canvai design` from the repo root, changes reflect via HMR
 4. Breaking export changes need a migration in `src/cli/migrations/` and a template update in `src/cli/templates.js`
 
 ### Plugin & skill changes
@@ -165,8 +165,8 @@ The consumer folder always uses `canvai@canvai` and doesn't need to know whether
 | `npm test` | Export contract + migration tests |
 | `npm run test:smoke` | Scaffold smoke test |
 | `./scripts/bump-version.sh <version>` | Bump all version fields |
-| `npx canvai dev` | Start dev server + annotation MCP |
-| `npx canvai init` | Scaffold consumer project files |
+| `npx canvai design` | Start dev server + annotation MCP |
+| `npx canvai new` | Scaffold consumer project files |
 | `npx canvai update` | Update consumer to latest canvai |
 
 ### Dev skills

@@ -5,7 +5,7 @@ Canvai is a design studio. A Figma-like infinite canvas where every design is li
 ## Architecture
 
 Canvai has two pieces:
-- **npm package** — the canvas runtime, Vite plugin, and CLI (`canvai init`, `canvai dev`)
+- **npm package** — the canvas runtime, Vite plugin, and CLI (`canvai new`, `canvai design`)
 - **Claude Code plugin** — skills, MCP config, and agent instructions (marketplace in `plugin/`, plugin at `plugin/plugins/canvai/`)
 
 Consumer-facing instructions (design workflow, annotation flow, manifest format, component matrix, design language) live in `plugin/plugins/canvai/CLAUDE.md` — not here.
@@ -16,7 +16,7 @@ Consumer-facing instructions (design workflow, annotation flow, manifest format,
 src/
   runtime/            ← canvas platform (Canvas, Frame, layout, types)
   vite-plugin/        ← auto-discovers project manifests
-  cli/                ← CLI commands (init, dev, update)
+  cli/                ← CLI commands (new, design, update)
     migrations/       ← versioned migration files
     migrate.js        ← migration runner
     templates.js      ← scaffold templates
@@ -51,7 +51,7 @@ If you remove/rename a runtime export, you MUST:
 
 ### Scaffolded file changes (CRITICAL)
 
-`src/App.tsx` and other files from `src/cli/templates.js` are **consumer-owned** — they're copied during `canvai init` and live in the consumer's project, not in `node_modules`. Changing a template does NOT update existing consumers. If you change ANY scaffolded template, you MUST:
+`src/App.tsx` and other files from `src/cli/templates.js` are **consumer-owned** — they're copied during `canvai new` and live in the consumer's project, not in `node_modules`. Changing a template does NOT update existing consumers. If you change ANY scaffolded template, you MUST:
 1. Update the template in `src/cli/templates.js`
 2. Write a migration in `src/cli/migrations/` to patch existing consumer files
 3. Bump the version via `./scripts/bump-version.sh`
@@ -193,8 +193,8 @@ Register new migrations in `src/cli/migrations/index.js`. Keep them sorted by ve
 - `npm test` — run export contract + migration tests
 - `npm run test:smoke` — scaffold smoke test
 - `./scripts/bump-version.sh <version>` — bump all version fields
-- `npx canvai init` — scaffold consumer project files
-- `npx canvai dev` — start dev server + annotation MCP
+- `npx canvai new` — scaffold consumer project files
+- `npx canvai design` — start dev server + annotation MCP
 - `npx canvai update` — update canvai to latest from GitHub
 - `npx canvai doctor` — check and fix project files (self-healing migrations)
 
@@ -213,8 +213,8 @@ The consumer folder always uses `canvai@canvai` — it doesn't need to know whet
 
 ### Plugin skills (consumer-facing, in `plugin/plugins/canvai/skills/`)
 
-- **`/canvai-init <project-name>`** — Create a new design project and start designing
-- **`/canvai-dev`** — Start (or restart) the dev server and enter watch mode
+- **`/canvai-new <project-name>`** — Create a new design project and start designing
+- **`/canvai-design`** — Start (or restart) the dev server and enter watch mode
 - **`/canvai-share`** — Build and deploy to GitHub Pages for sharing
 - **`/canvai-close`** — Stop all Canvai dev servers and free ports
 - **`/canvai-update`** — Update canvai to the latest version

@@ -11,7 +11,7 @@ Stop all running Canvai processes (Vite dev server, MCP HTTP server).
 
 1. **Kill all canvai-related processes:**
    ```bash
-   pkill -f "canvai dev" 2>/dev/null; pkill -f "vite" 2>/dev/null; pkill -f "http-server.js" 2>/dev/null
+   pkill -f "canvai design" 2>/dev/null; pkill -f "vite" 2>/dev/null; pkill -f "http-server.js" 2>/dev/null
    ```
    It's fine if these fail (nothing was running).
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Smoke test: scaffold a fresh consumer project and verify it typechecks.
-# Simulates what a real consumer does: npm install canvai, canvai init, tsc.
+# Simulates what a real consumer does: npm install canvai, canvai new, tsc.
 #
 set -euo pipefail
 
@@ -23,9 +23,9 @@ npm init -y --silent >/dev/null 2>&1
 echo "==> Installing canvai from local path..."
 npm install "$CANVAI_ROOT" --silent 2>&1 | tail -1
 
-# Run canvai init
-echo "==> Running canvai init..."
-npx canvai init 2>&1
+# Run canvai new
+echo "==> Running canvai new..."
+npx canvai new 2>&1
 
 # Verify expected files exist
 echo "==> Verifying scaffolded files..."

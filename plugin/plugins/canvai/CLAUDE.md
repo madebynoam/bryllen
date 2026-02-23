@@ -15,7 +15,7 @@ Tenets are decision-making tools — each names the alternative and rejects it.
 
 ## User workflow
 
-1. **`/canvai-init <project-name>`** — Creates a new design project, installs canvai if needed, starts the dev server + annotation MCP.
+1. **`/canvai-new <project-name>`** — Creates a new design project, installs canvai if needed, starts the dev server + annotation MCP.
 2. **Describe** — The designer describes the component (or attaches a sketch). The agent generates **multiple distinct design directions** — not just one version with states, but several different design bets shown simultaneously on the canvas. The designer reacts visually and picks a direction (or mixes elements). Then refine from there.
 3. **Annotate** — The designer clicks "Annotate" on the canvas, selects an element, types a comment, and clicks "Save". This creates a draft. The designer reviews drafts in the TopBar dropdown and clicks "Apply" (single or all) to send them to the agent.
 4. **Iterate** — The designer clicks "New Iteration" on the canvas to create a snapshot copy. The agent handles it via the watch loop.
@@ -505,7 +505,7 @@ draft  →  pending  →  resolved
 
 Annotations persist to `.canvai/annotations.json` and survive page refresh and server restart.
 
-**`/canvai-dev`** starts the dev server and enters the watch loop. The agent calls `watch_annotations` in a loop (each call times out after 30 seconds), processing annotations as the designer applies them. Between timeouts the agent can respond to chat messages. The designer controls the pace — annotations arrive only when they click Apply.
+**`/canvai-design`** starts the dev server and enters the watch loop. The agent calls `watch_annotations` in a loop (each call times out after 30 seconds), processing annotations as the designer applies them. Between timeouts the agent can respond to chat messages. The designer controls the pace — annotations arrive only when they click Apply.
 
 ### Processing an annotation
 
@@ -546,8 +546,8 @@ Each entry includes the `selector`, a brief description of the change, and the a
 
 ## Skills
 
-- **`/canvai-init <project-name>`** — Create a new design project and start designing
-- **`/canvai-dev`** — Start (or restart) the dev server and enter watch mode
+- **`/canvai-new <project-name>`** — Create a new design project and start designing
+- **`/canvai-design`** — Start (or restart) the dev server and enter watch mode
 - **`/canvai-share`** — Build and deploy to GitHub Pages for sharing
 - **`/canvai-close`** — Stop all Canvai dev servers and free ports
 - **`/canvai-update`** — Update canvai to the latest version

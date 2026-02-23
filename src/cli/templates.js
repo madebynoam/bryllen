@@ -1,5 +1,5 @@
 /**
- * Scaffold templates for `canvai init`.
+ * Scaffold templates for `canvai new`.
  * These are the consumer-project versions of each file,
  * importing from 'canvai/runtime' and 'canvai/vite-plugin'.
  */

@@ -29,7 +29,7 @@ Update everything in one shot — npm package, migrations, and Claude Code plugi
    - npm package and plugin are updated
    - Migration changes committed (can `git revert` if needed)
    - **They must restart this Claude Code session** for plugin changes to take effect
-   - If the dev server was running, restart it with `/canvai-dev`
+   - If the dev server was running, restart it with `/canvai-design`
 
 ## Why no `claude plugin update`?
 

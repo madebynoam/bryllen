@@ -54,7 +54,7 @@ mcp.registerTool(
       }
     } catch (err) {
       return {
-        content: [{ type: 'text', text: `Error waiting for annotations: ${err.message}. Is canvai dev running?` }],
+        content: [{ type: 'text', text: `Error waiting for annotations: ${err.message}. Is canvai design running?` }],
         isError: true,
       }
     }
@@ -117,7 +117,7 @@ mcp.registerTool(
       }
     } catch (err) {
       return {
-        content: [{ type: 'text', text: `Error fetching annotations: ${err.message}. Is canvai dev running?` }],
+        content: [{ type: 'text', text: `Error fetching annotations: ${err.message}. Is canvai design running?` }],
         isError: true,
       }
     }
@@ -161,7 +161,7 @@ mcp.registerTool(
       }
     } catch (err) {
       return {
-        content: [{ type: 'text', text: `Error taking screenshot: ${err.message}. Is canvai dev running?` }],
+        content: [{ type: 'text', text: `Error taking screenshot: ${err.message}. Is canvai design running?` }],
         isError: true,
       }
     }
@@ -183,7 +183,7 @@ mcp.registerTool(
       }
     } catch (err) {
       return {
-        content: [{ type: 'text', text: `Error fetching annotations: ${err.message}. Is canvai dev running?` }],
+        content: [{ type: 'text', text: `Error fetching annotations: ${err.message}. Is canvai design running?` }],
         isError: true,
       }
     }

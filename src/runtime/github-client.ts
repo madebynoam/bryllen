@@ -1,7 +1,7 @@
 /**
  * canvai — Browser-side GitHub API client
  *
- * Used on GitHub Pages (static builds) where there is no canvai dev server.
+ * Used on GitHub Pages (static builds) where there is no canvai design server.
  * The token is stored in localStorage after the device flow completes in-browser.
  *
  * In local dev, the CommentOverlay routes through the server proxy instead.

@@ -1,15 +1,15 @@
 ---
-name: canvai-init
+name: canvai-new
 description: Create a new design project and start designing
 ---
 
-# /canvai-init <project-name>
+# /canvai-new <project-name>
 
 Create a new design project inside Canvai and launch the dev environment.
 
 ## Steps
 
-1. **Parse the project name** from the user's command (e.g. `/canvai-init button`). If no name is provided, ask for one.
+1. **Parse the project name** from the user's command (e.g. `/canvai-new button`). If no name is provided, ask for one.
 
 2. **Initialize git** — check for a `.git` directory in the current folder.
    - If missing: run `git init`
@@ -35,7 +35,7 @@ Create a new design project inside Canvai and launch the dev environment.
 
 5. **Scaffold the project.** Run:
    ```bash
-   npx canvai init
+   npx canvai new
    ```
    This creates `index.html`, `vite.config.ts`, `src/App.tsx`, `src/main.tsx`, `CLAUDE.md` (project rules), `.claude/settings.json` (frozen guard hook), `.mcp.json` (annotation MCP config), tsconfigs, and installs peer dependencies. Files that already exist are skipped.
 
@@ -61,7 +61,7 @@ Create a new design project inside Canvai and launch the dev environment.
 
 9. **Launch the dev server:**
    ```bash
-   npx canvai dev
+   npx canvai design
    ```
    This starts both Vite and the annotation HTTP server in one command.
 
