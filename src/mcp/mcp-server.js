@@ -33,9 +33,24 @@ mcp.registerTool(
   },
   async () => {
     try {
-      const annotation = await httpGet('/annotations/next?timeout=15000')
+      const result = await httpGet('/annotations/next?timeout=15000')
+
+      if (result.timeout) {
+        return {
+          content: [{ type: 'text', text: 'Waiting for designer...' }],
+        }
+      }
+
+      const { id, type, componentName, comment } = result
+      const what = type === 'iteration' ? 'New iteration request' : `Annotation #${id}`
+      const target = componentName ? ` on ${componentName}` : ''
+      const summary = `${what}${target}: "${comment}"`
+
       return {
-        content: [{ type: 'text', text: JSON.stringify(annotation, null, 2) }],
+        content: [
+          { type: 'text', text: summary },
+          { type: 'text', text: JSON.stringify(result, null, 2) },
+        ],
       }
     } catch (err) {
       return {
@@ -61,12 +76,13 @@ mcp.registerTool(
       const result = await httpPost(`/annotations/${id}/resolve`)
       if (result.error) {
         return {
-          content: [{ type: 'text', text: `Annotation ${id} not found.` }],
+          content: [{ type: 'text', text: `Annotation #${id} not found.` }],
           isError: true,
         }
       }
+      const comment = (result.comment || '').slice(0, 60)
       return {
-        content: [{ type: 'text', text: `Annotation ${id} resolved.` }],
+        content: [{ type: 'text', text: `Done — #${id} resolved and committed. "${comment}"` }],
       }
     } catch (err) {
       return {
@@ -87,8 +103,17 @@ mcp.registerTool(
   async () => {
     try {
       const pending = await httpGet('/annotations?status=pending')
+      if (pending.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'No pending annotations. Canvas is clean.' }],
+        }
+      }
+      const summary = pending.map(a => `#${a.id}: "${(a.comment || '').slice(0, 50)}"`)
       return {
-        content: [{ type: 'text', text: JSON.stringify(pending, null, 2) }],
+        content: [
+          { type: 'text', text: `${pending.length} pending annotation${pending.length > 1 ? 's' : ''}: ${summary.join(', ')}` },
+          { type: 'text', text: JSON.stringify(pending, null, 2) },
+        ],
       }
     } catch (err) {
       return {
