@@ -147,9 +147,7 @@ Before editing any file in `src/projects/<name>/v<N>/`:
    - No → create it in `components/` first, add to `index.ts`, then use it in the page.
 4. **When creating a new component** — add it to `components/index.ts` AND add a showcase entry to the Components page (`pages/components.tsx`) with its variations and states. The barrel and the showcase are two separate registrations — both are mandatory.
 5. **Log to `CHANGELOG.md`** — every design change gets recorded.
-6. **Commit after each change** — After completing the requested changes, stage and commit project files:
-   `git add src/projects/ && git commit -m 'style: <brief description of change>'`
-   Every change gets its own commit. This creates a clean history the designer can rewind with `/canvai-undo`.
+6. **Auto-commit** — When you call `resolve_annotation`, the server automatically stages `src/projects/` and commits with a descriptive message. No manual git commands needed. Every annotation gets its own commit, creating a clean history the designer can rewind.
 
 ## Manifest format
 

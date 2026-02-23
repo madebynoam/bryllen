@@ -2,6 +2,7 @@
 
 import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'fs'
+import { execSync } from 'child_process'
 import { join } from 'path'
 import {
   initiateDeviceFlow,
@@ -185,6 +186,30 @@ function applyAllAnnotations() {
   return applied
 }
 
+function autoCommit(annotation) {
+  try {
+    // Check if there are staged or unstaged changes in src/projects/
+    const status = execSync('git status --porcelain src/projects/', { encoding: 'utf8' }).trim()
+    if (!status) return // nothing to commit
+
+    execSync('git add src/projects/', { stdio: 'ignore' })
+
+    const comment = (annotation.comment || '').slice(0, 72).replace(/'/g, "'\\''")
+    const prefix = annotation.type === 'iteration' ? 'feat' : 'style'
+    const msg = `${prefix}: annotation #${annotation.id} — ${comment}`
+
+    execSync(`git commit -m '${msg}'`, { stdio: 'ignore' })
+    console.log(`[canvai] Auto-committed: ${msg}`)
+
+    // Notify SSE clients about the commit
+    for (const client of sseClients) {
+      client.write(`data: ${JSON.stringify({ type: 'committed', id: annotation.id, message: msg })}\n\n`)
+    }
+  } catch {
+    // Silent — git not available, no repo, or nothing to commit
+  }
+}
+
 function resolveAnnotation(id) {
   const annotation = annotations.get(id)
   if (annotation) {
@@ -194,6 +219,8 @@ function resolveAnnotation(id) {
     for (const client of sseClients) {
       client.write(`data: ${JSON.stringify({ type: 'resolved', id })}\n\n`)
     }
+    // Auto-commit project changes
+    autoCommit(annotation)
   }
   return annotation
 }

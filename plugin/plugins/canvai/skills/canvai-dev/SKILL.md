@@ -38,9 +38,8 @@ Start the Canvai dev server and enter watch mode.
      - Check for: broken contrast, overflow/clipping, misalignment, wrong colors, missing styles
      - If issues found: fix them and screenshot again
      - If clean: proceed
-   - Call `resolve_annotation` with the annotation `id`
+   - Call `resolve_annotation` with the annotation `id` (this auto-commits project changes)
    - Log the change to `CHANGELOG.md`
-   - Commit: `git add src/projects/ && git commit -m 'style: annotation #<N> — <brief description>'`
    - Call `watch_annotations` again — back to waiting
 
    **Iteration request arrives** (annotation has `type: 'iteration'`) — run the iteration protocol:
@@ -54,8 +53,8 @@ Start the Canvai dev server and enter watch mode.
    8. **Visual review:** Call `screenshot_canvas` (no frameId — screenshot all frames)
       - Read the screenshot to verify the new iteration looks correct
       - Fix any visual issues before resolving
-   9. Call `resolve_annotation` with the annotation `id`
-   10. Log to `CHANGELOG.md`, commit: `git add src/projects/ && git commit -m 'feat: iteration V<N+1> — <brief description>'`
+   9. Call `resolve_annotation` with the annotation `id` (this auto-commits project changes)
+   10. Log to `CHANGELOG.md`
    - Call `watch_annotations` again — back to waiting
 
    **Timeout** (response contains `"timeout": true`) — no annotation arrived. Call `watch_annotations` again to keep waiting. The timeout exists so you stay responsive to designer messages between polls.
