@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { spawn, execSync } from 'child_process'
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { createServer } from 'net'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 import {
@@ -157,7 +158,30 @@ function update() {
   })
 }
 
-function startDev() {
+/** Check if a port is free (uses localhost to match Vite/Node defaults). */
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    const srv = createServer()
+    srv.once('error', () => resolve(false))
+    srv.once('listening', () => { srv.close(); resolve(true) })
+    srv.listen(port, 'localhost')
+  })
+}
+
+/** Find a free port starting from `start`, incrementing until one is available. */
+async function findFreePort(start) {
+  for (let port = start; port < start + 100; port++) {
+    if (await isPortFree(port)) return port
+  }
+  throw new Error(`No free port found in range ${start}–${start + 99}`)
+}
+
+/** Write port info so MCP server and Vite plugin can discover them. */
+function writePorts(cwd, httpPort, vitePort, vitePid, httpPid) {
+  writeFileSync(join(cwd, '.canvai-ports.json'), JSON.stringify({ http: httpPort, vite: vitePort, vitePid, httpPid, pid: process.pid }) + '\n')
+}
+
+async function startDev() {
   const cwd = process.cwd()
 
   // Clear Vite dep cache so updated canvai code is re-bundled
@@ -172,26 +196,33 @@ function startDev() {
     console.log(`Applied ${applied} migration${applied === 1 ? '' : 's'}.\n`)
   }
 
-  // Kill anything holding our ports (stale processes, orphaned browsers, etc.)
-  try { execSync('lsof -ti :4748 | xargs kill -9 2>/dev/null', { stdio: 'ignore' }) } catch {}
-  try { execSync('lsof -ti :5173 | xargs kill -9 2>/dev/null', { stdio: 'ignore' }) } catch {}
+  // Find free ports — never kill existing servers
+  const httpPort = await findFreePort(4748)
+  const vitePort = await findFreePort(5173)
 
-  // Start Vite dev server
-  const vite = spawn('npx', ['vite', '--open'], {
+  console.log(`[canvai] HTTP server → :${httpPort}  Vite → :${vitePort}`)
+
+  // Start Vite dev server on the chosen port
+  const vite = spawn('npx', ['vite', '--open', '--port', String(vitePort), '--strictPort'], {
     cwd,
     stdio: 'inherit',
     shell: true,
   })
 
-  // Start annotation HTTP server
+  // Start annotation HTTP server with the chosen port
   const httpServerPath = join(__dirname, '..', 'mcp', 'http-server.js')
   const httpSrv = spawn('node', [httpServerPath], {
     cwd,
     stdio: 'inherit',
+    env: { ...process.env, CANVAI_HTTP_PORT: String(httpPort), CANVAI_VITE_PORT: String(vitePort) },
   })
 
-  // Clean up on exit
+  // Write ports + PIDs so cleanup kills only THIS project's processes
+  writePorts(cwd, httpPort, vitePort, vite.pid, httpSrv.pid)
+
+  // Clean up on exit — remove ports file so stale info doesn't linger
   function cleanup() {
+    try { rmSync(join(cwd, '.canvai-ports.json'), { force: true }) } catch {}
     vite.kill()
     httpSrv.kill()
     process.exit()
@@ -201,6 +232,7 @@ function startDev() {
   process.on('SIGTERM', cleanup)
 
   vite.on('exit', (code) => {
+    try { rmSync(join(cwd, '.canvai-ports.json'), { force: true }) } catch {}
     httpSrv.kill()
     process.exit(code ?? 0)
   })

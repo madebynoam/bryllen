@@ -12,14 +12,17 @@ Start the Canvai dev server and enter watch mode.
 1. **Kill only THIS project's existing servers** (not other canvai instances):
    ```bash
    if [ -f .canvai-ports.json ]; then
-     HTTP_PORT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.canvai-ports.json','utf8')).http)")
-     VITE_PORT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.canvai-ports.json','utf8')).vite)")
-     lsof -ti :$HTTP_PORT | xargs kill 2>/dev/null
-     lsof -ti :$VITE_PORT | xargs kill 2>/dev/null
+     # Kill by PID (safe) — never by port (could kill another project's server)
+     node -e "
+       const f = JSON.parse(require('fs').readFileSync('.canvai-ports.json','utf8'));
+       for (const pid of [f.pid, f.vitePid, f.httpPid].filter(Boolean)) {
+         try { process.kill(pid, 'SIGTERM'); } catch {}
+       }
+     "
      rm -f .canvai-ports.json
    fi
    ```
-   This reads the ports file written by `canvai design` and kills only those processes. Other canvai instances on different ports are left alone. It's fine if nothing was running.
+   This reads PIDs from the ports file and kills only THIS project's processes. Other canvai instances are untouched. It's fine if nothing was running.
 
 2. **Start the dev server** in the background:
    ```bash
