@@ -3,7 +3,8 @@ import { N, A, S, R, T, FONT } from '../tokens'
 import { ColorPicker } from './ColorPicker'
 import { oklchToDisplayHex } from './colorUtils'
 
-const ENDPOINT = 'http://localhost:4748'
+declare const __CANVAI_HTTP_PORT__: number
+const ENDPOINT = `http://localhost:${__CANVAI_HTTP_PORT__ ?? 4748}`
 
 interface SwatchProps {
   color: string
