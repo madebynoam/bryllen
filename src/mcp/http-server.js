@@ -105,10 +105,10 @@ loadAnnotations()
 
 function addAnnotation(data) {
   const id = String(nextId++)
-  const isIteration = data.type === 'iteration'
+  const isImmediate = data.type === 'iteration' || data.type === 'project'
   const annotation = {
     id,
-    type: isIteration ? 'iteration' : 'annotation',
+    type: isImmediate ? data.type : 'annotation',
     frameId: data.frameId ?? '',
     componentName: data.componentName ?? '',
     props: data.props ?? {},
@@ -119,20 +119,21 @@ function addAnnotation(data) {
     computedStyles: data.computedStyles ?? {},
     comment: data.comment ?? '',
     timestamp: Date.now(),
-    status: isIteration ? 'pending' : 'draft',
+    status: isImmediate ? 'pending' : 'draft',
   }
   annotations.set(id, annotation)
   persistAnnotations()
 
-  // Iteration annotations skip draft — immediately unblock a waiter
-  if (isIteration) {
+  // Immediate annotations (iteration, project) skip draft — immediately unblock a waiter
+  if (isImmediate) {
     if (waiters.length > 0) {
       const waiter = waiters.shift()
       waiter.resolve(annotation)
     }
     // Notify SSE clients
+    const sseType = data.type === 'project' ? 'project-pending' : 'iteration-pending'
     for (const client of sseClients) {
-      client.write(`data: ${JSON.stringify({ type: 'iteration-pending', id })}\n\n`)
+      client.write(`data: ${JSON.stringify({ type: sseType, id })}\n\n`)
     }
   }
 
@@ -195,7 +196,7 @@ function autoCommit(annotation) {
     execSync('git add src/projects/', { stdio: 'ignore' })
 
     const comment = (annotation.comment || '').slice(0, 72).replace(/'/g, "'\\''")
-    const prefix = annotation.type === 'iteration' ? 'feat' : 'style'
+    const prefix = (annotation.type === 'iteration' || annotation.type === 'project') ? 'feat' : 'style'
     const msg = `${prefix}: annotation #${annotation.id} — ${comment}`
 
     execSync(`git commit -m '${msg}'`, { stdio: 'ignore' })

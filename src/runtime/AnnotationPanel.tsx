@@ -7,7 +7,7 @@ import { useMenu, MenuPanel } from './Menu'
 
 interface Annotation {
   id: string
-  type?: 'annotation' | 'iteration'
+  type?: 'annotation' | 'iteration' | 'project'
   comment: string
   componentName: string
   elementTag: string
@@ -143,14 +143,14 @@ function AnnotationRow({
           {annotation.comment}
         </div>
         <div style={{ fontSize: T.label, color: N.txtTer, marginTop: 2 }}>
-          {annotation.type === 'iteration' ? 'Iteration request' : <>{annotation.componentName} &middot; {annotation.elementTag}</>}
+          {annotation.type === 'iteration' ? 'Iteration request' : annotation.type === 'project' ? 'Project request' : <>{annotation.componentName} &middot; {annotation.elementTag}</>}
         </div>
       </div>
 
       {/* Actions — show on hover */}
       {hovered && !isResolved && (
         <div style={{ display: 'flex', alignItems: 'center', gap: S.xs, flexShrink: 0, marginTop: 2 }}>
-          {annotation.type !== 'iteration' && (
+          {annotation.type !== 'iteration' && annotation.type !== 'project' && (
             <button
               onClick={(e) => { e.stopPropagation(); onNavigate(annotation.id) }}
               title="Navigate to element"
@@ -241,7 +241,7 @@ function PendingRow({ annotation }: { annotation: Annotation }) {
           {annotation.comment}
         </div>
         <div style={{ fontSize: T.label, color: N.txtTer, marginTop: 2 }}>
-          {annotation.type === 'iteration' ? 'Creating iteration\u2026' : 'Applying\u2026'}
+          {annotation.type === 'iteration' ? 'Creating iteration\u2026' : annotation.type === 'project' ? 'Creating project\u2026' : 'Applying\u2026'}
         </div>
       </div>
     </div>

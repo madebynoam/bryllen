@@ -18,6 +18,7 @@ interface TopBarProps {
   sidebarOpen: boolean
   onToggleSidebar: () => void
   onNewIteration?: () => void
+  onNewProject?: () => void
 }
 
 function SidebarIcon() {
@@ -37,6 +38,7 @@ export function TopBar({
   sidebarOpen,
   onToggleSidebar,
   onNewIteration,
+  onNewProject,
 }: TopBarProps) {
   // Reverse so newest iteration is on top
   const reversedIterations = [...iterations].reverse()
@@ -78,6 +80,7 @@ export function TopBar({
           projects={projects}
           activeIndex={activeProjectIndex}
           onSelect={onSelectProject}
+          onNewProject={onNewProject}
         />
 
         {iterations.length > 0 && (

@@ -503,9 +503,20 @@ draft  →  pending  →  resolved
  (Save)    (Apply)     (agent done)
 ```
 
+**Immediate annotations** (`type: 'iteration'` and `type: 'project'`) skip the draft stage — they go directly to `pending` and immediately unblock the watch loop.
+
 Annotations persist to `.canvai/annotations.json` and survive page refresh and server restart.
 
 **`/canvai-design`** starts the dev server and enters the watch loop. The agent calls `watch_annotations` in a loop (each call times out after 30 seconds), processing annotations as the designer applies them. Between timeouts the agent can respond to chat messages. The designer controls the pace — annotations arrive only when they click Apply.
+
+### Processing a project annotation
+
+When a `type: 'project'` annotation arrives:
+1. Parse the JSON comment: `{ name, description, prompt }`
+2. Create the project folder: `src/projects/<name>/v1/{tokens.css, components/index.ts, pages/}`
+3. Create `manifest.ts` and `CHANGELOG.md`
+4. If `prompt` is provided, generate the initial design following the standard project creation flow
+5. Call `resolve_annotation` with the annotation `id`
 
 ### Processing an annotation
 

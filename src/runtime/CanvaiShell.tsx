@@ -8,11 +8,13 @@ import { IterationSidebar } from './IterationSidebar'
 import { AnnotationOverlay } from './AnnotationOverlay'
 import { CommentOverlay } from './CommentOverlay'
 import { NewIterationDialog } from './NewIterationDialog'
+import { NewProjectDialog } from './NewProjectDialog'
 import { useNavMemory } from './useNavMemory'
 import { ZoomControl } from './ZoomControl'
 import { CanvasColorPicker } from './CanvasColorPicker'
 import { loadCanvasBg, saveCanvasBg } from './Canvas'
-import { N, E } from './tokens'
+import { ActionButton } from './Menu'
+import { N, E, S, T, R, FONT } from './tokens'
 import type { ProjectManifest } from './types'
 
 interface CanvaiShellProps {
@@ -25,6 +27,19 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   const [commentCount, setCommentCount] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [iterDialogOpen, setIterDialogOpen] = useState(false)
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false)
+
+  const handleNewProject = useCallback(async (payload: { name: string, description: string, prompt: string }) => {
+    try {
+      await fetch(`${annotationEndpoint}/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'project', comment: JSON.stringify(payload) }),
+      })
+    } catch {
+      // Server may be unavailable
+    }
+  }, [annotationEndpoint])
 
   const handleNewIteration = useCallback(async (prompt: string) => {
     try {
@@ -56,6 +71,63 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   useEffect(() => { setCanvasBg(loadCanvasBg(projectKey) ?? N.canvas) }, [projectKey])
   useEffect(() => { saveCanvasBg(projectKey, canvasBg) }, [projectKey, canvasBg])
 
+  // Empty state — no projects yet
+  if (manifests.length === 0) {
+    return (
+      <div id="canvai-root" style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: N.canvas,
+        fontFamily: FONT,
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: S.lg,
+          padding: S.xxl,
+          background: N.card,
+          border: `1px solid ${N.border}`,
+          borderRadius: R.panel,
+          maxWidth: 400,
+          textAlign: 'center',
+        }}>
+          <h2 style={{
+            fontSize: T.title,
+            fontWeight: 600,
+            color: N.txtPri,
+            margin: 0,
+            textWrap: 'pretty',
+          }}>
+            Start a new project
+          </h2>
+          <p style={{
+            fontSize: T.body,
+            color: N.txtSec,
+            margin: 0,
+            lineHeight: 1.5,
+            textWrap: 'pretty',
+          }}>
+            Describe what you're designing and the agent will set it up
+          </p>
+          <ActionButton variant="primary" onClick={() => setProjectDialogOpen(true)}>
+            New Project
+          </ActionButton>
+        </div>
+        {import.meta.env.DEV && (
+          <NewProjectDialog
+            open={projectDialogOpen}
+            onClose={() => setProjectDialogOpen(false)}
+            onSubmit={handleNewProject}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div id="canvai-root" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar
@@ -70,6 +142,7 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(o => !o)}
         onNewIteration={() => setIterDialogOpen(true)}
+        onNewProject={() => setProjectDialogOpen(true)}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -130,6 +203,13 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
           open={iterDialogOpen}
           onClose={() => setIterDialogOpen(false)}
           onSubmit={handleNewIteration}
+        />
+      )}
+      {import.meta.env.DEV && (
+        <NewProjectDialog
+          open={projectDialogOpen}
+          onClose={() => setProjectDialogOpen(false)}
+          onSubmit={handleNewProject}
         />
       )}
     </div>

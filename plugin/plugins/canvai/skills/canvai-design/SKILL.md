@@ -57,6 +57,14 @@ Start the Canvai dev server and enter watch mode.
    10. Log to `CHANGELOG.md`
    - Call `watch_annotations` again — back to waiting
 
+   **Project request arrives** (annotation has `type: 'project'`) — create a new project:
+   1. Parse the JSON comment: `{ name, description, prompt }`
+   2. Create the project folder structure: `src/projects/<name>/v1/{tokens.css, components/index.ts, pages/}`
+   3. Create `manifest.ts` and `CHANGELOG.md`
+   4. If `prompt` is provided, generate the initial design (tokens, components, pages) following the standard "What happens next" sequence from the `/canvai-new` skill
+   5. Call `resolve_annotation` with the annotation `id`
+   6. Call `watch_annotations` again — back to waiting
+
    **Timeout** (response contains `"timeout": true`) — no annotation arrived. Call `watch_annotations` again to keep waiting. The timeout exists so you stay responsive to designer messages between polls.
 
 6. **Chat while watching:** The designer can send messages at any time — you'll see them between `watch_annotations` calls. Handle the message (answer a question, make a change, kill the server, etc.), then resume the watch loop by calling `watch_annotations` again.

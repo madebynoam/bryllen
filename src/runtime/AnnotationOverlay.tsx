@@ -197,7 +197,7 @@ export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) 
       .then(r => r.json())
       .then((all: { id: string; type?: string; frameId: string; selector: string; comment: string; status: string }[]) => {
         const active = all.filter(a =>
-          (a.status === 'draft' || a.status === 'pending') && a.type !== 'iteration'
+          (a.status === 'draft' || a.status === 'pending') && a.type !== 'iteration' && a.type !== 'project'
         )
         if (active.length === 0) return
         setMarkers(active.map(a => ({

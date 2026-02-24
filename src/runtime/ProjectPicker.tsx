@@ -1,14 +1,17 @@
 import { PickerDropdown } from './PickerDropdown'
-import { A, N, S, T } from './tokens'
+import { MenuRow } from './Menu'
+import { Plus } from 'lucide-react'
+import { A, N, S, T, ICON } from './tokens'
 
 interface ProjectPickerProps {
   projects: { project: string }[]
   activeIndex: number
   onSelect: (index: number) => void
   forceOpen?: boolean
+  onNewProject?: () => void
 }
 
-export function ProjectPicker({ projects, activeIndex, onSelect, forceOpen = false }: ProjectPickerProps) {
+export function ProjectPicker({ projects, activeIndex, onSelect, forceOpen = false, onNewProject }: ProjectPickerProps) {
   return (
     <PickerDropdown
       items={projects}
@@ -16,6 +19,15 @@ export function ProjectPicker({ projects, activeIndex, onSelect, forceOpen = fal
       onSelect={onSelect}
       forceOpen={forceOpen}
       width={220}
+      footer={import.meta.env.DEV && onNewProject ? (
+        <MenuRow
+          onClick={onNewProject}
+          icon={<Plus size={ICON.md} strokeWidth={1.5} color={N.txtTer} />}
+          style={{ padding: `${S.sm}px ${S.sm}px`, fontSize: T.body, color: N.txtSec }}
+        >
+          New Project
+        </MenuRow>
+      ) : undefined}
       triggerPrefix={
         <div
           style={{

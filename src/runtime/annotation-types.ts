@@ -1,6 +1,6 @@
 export interface CanvaiAnnotation {
   id: string
-  type?: 'annotation' | 'iteration'
+  type?: 'annotation' | 'iteration' | 'project'
   frameId: string
   componentName: string
   props: Record<string, unknown>
