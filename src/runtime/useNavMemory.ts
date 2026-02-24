@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const NAV_KEY = 'canvai:nav:'
 const SYSTEM_PAGES = ['Tokens', 'Components']
@@ -24,6 +24,21 @@ function firstContentPage(pages: { name: string }[]): number {
   return idx >= 0 ? idx : 0
 }
 
+function resolveNav(project: string, iterations: { name: string; pages: { name: string }[] }[]): NavState {
+  const latestIdx = Math.max(0, iterations.length - 1)
+  const saved = load(project)
+  if (saved && saved.iteration < iterations.length) {
+    if (saved.iteration < latestIdx) {
+      const pages = iterations[latestIdx]?.pages ?? []
+      return { iteration: latestIdx, page: firstContentPage(pages) }
+    }
+    const iter = iterations[saved.iteration]
+    if (saved.page < (iter?.pages?.length ?? 0)) return saved
+  }
+  const pages = iterations[latestIdx]?.pages ?? []
+  return { iteration: latestIdx, page: firstContentPage(pages) }
+}
+
 /**
  * Remembers iteration + page selection per project.
  * On fresh load: latest iteration, first content page (not Tokens/Components).
@@ -32,22 +47,16 @@ export function useNavMemory(
   project: string,
   iterations: { name: string; pages: { name: string }[] }[],
 ) {
-  const [state, setState] = useState<NavState>(() => {
-    const latestIdx = Math.max(0, iterations.length - 1)
-    const saved = load(project)
-    if (saved && saved.iteration < iterations.length) {
-      // If a newer iteration was added since last visit, jump to it
-      if (saved.iteration < latestIdx) {
-        const pages = iterations[latestIdx]?.pages ?? []
-        return { iteration: latestIdx, page: firstContentPage(pages) }
-      }
-      const iter = iterations[saved.iteration]
-      if (saved.page < (iter?.pages?.length ?? 0)) return saved
+  const [state, setState] = useState<NavState>(() => resolveNav(project, iterations))
+  const prevProject = useRef(project)
+
+  // Reset nav state when the active project changes
+  useEffect(() => {
+    if (prevProject.current !== project) {
+      prevProject.current = project
+      setState(resolveNav(project, iterations))
     }
-    // Default: latest iteration, first content page
-    const pages = iterations[latestIdx]?.pages ?? []
-    return { iteration: latestIdx, page: firstContentPage(pages) }
-  })
+  }, [project, iterations])
 
   // Persist on change
   useEffect(() => {
