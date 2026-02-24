@@ -41,10 +41,13 @@ mcp.registerTool(
         }
       }
 
-      const { id, type, componentName, comment } = result
-      const what = type === 'iteration' ? 'New iteration request' : `Annotation #${id}`
+      const { id, type, project, componentName, comment } = result
+      const what = type === 'iteration' ? 'New iteration request'
+        : type === 'project' ? 'New project request'
+        : `Annotation #${id}`
+      const inProject = project ? ` in project "${project}"` : ''
       const target = componentName ? ` on ${componentName}` : ''
-      const summary = `${what}${target}: "${comment}"`
+      const summary = `${what}${inProject}${target}: "${comment}"`
 
       return {
         content: [

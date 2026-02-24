@@ -109,6 +109,7 @@ function addAnnotation(data) {
   const annotation = {
     id,
     type: isImmediate ? data.type : 'annotation',
+    project: data.project ?? '',
     frameId: data.frameId ?? '',
     componentName: data.componentName ?? '',
     props: data.props ?? {},
@@ -645,6 +646,7 @@ const httpServer = createServer(async (req, res) => {
 
       // Create annotation via existing flow
       const annotation = addAnnotation({
+        project: data.project ?? '',
         frameId: data.frameId ?? '',
         componentName: data.componentName ?? '',
         selector: data.selector ?? '',

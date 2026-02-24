@@ -21,6 +21,8 @@ interface TargetInfo {
 interface AnnotationOverlayProps {
   endpoint: string
   frames: CanvasFrame[]
+  showToast?: (msg: string) => void
+  project?: string
 }
 
 /* ── Marker dot ── */
@@ -162,12 +164,11 @@ interface AnnotationMarker {
   canvasPoint?: { x: number; y: number }
 }
 
-export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) {
+export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, project = '' }: AnnotationOverlayProps) {
   const [mode, setMode] = useState<Mode>('idle')
   const [highlight, setHighlight] = useState<DOMRect | null>(null)
   const [target, setTarget] = useState<TargetInfo | null>(null)
   const [comment, setComment] = useState('')
-  const [toast, setToast] = useState<string | null>(null)
   const [buttonState, setButtonState] = useState<'idle' | 'hover' | 'pressed'>('idle')
   const [markers, setMarkers] = useState<AnnotationMarker[]>([])
   const [markerRects, setMarkerRects] = useState<Map<number, DOMRect>>(new Map())
@@ -177,19 +178,16 @@ export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) 
   const cardRef = useRef<HTMLDivElement>(null)
   const nextMarkerId = useRef(1)
 
+  const toast = useCallback((msg: string) => {
+    if (externalToast) externalToast(msg)
+  }, [externalToast])
+
   // Focus textarea when entering commenting mode
   useEffect(() => {
     if (mode === 'commenting' && textareaRef.current) {
       textareaRef.current.focus()
     }
   }, [mode])
-
-  // Clear toast after 2s
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 2000)
-    return () => clearTimeout(t)
-  }, [toast])
 
   // Load persisted annotations on mount (survive page refresh)
   useEffect(() => {
@@ -348,6 +346,7 @@ export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) 
     // Strip internal __canvasPoint from props before sending to server
     const { __canvasPoint: _cp, ...serverProps } = target.props as any
     const body = {
+      project,
       frameId: target.frameId,
       componentName: target.componentName,
       props: serverProps,
@@ -387,16 +386,16 @@ export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) 
           canvasPoint,
         }])
       }
-      setToast('Saved')
+      toast('Saved')
     } catch {
-      setToast('Failed to save')
+      toast('Failed to save')
     }
 
     setMode('idle')
     setTarget(null)
     setComment('')
     setEditingMarkerId(null)
-  }, [target, comment, endpoint, editingMarkerId])
+  }, [target, comment, endpoint, editingMarkerId, toast, project])
 
   const handleCancel = useCallback(() => {
     setMode('idle')
@@ -417,8 +416,8 @@ export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) 
     setTarget(null)
     setComment('')
     setEditingMarkerId(null)
-    setToast('Annotation deleted')
-  }, [editingMarkerId, markers, endpoint])
+    toast('Annotation deleted')
+  }, [editingMarkerId, markers, endpoint, toast])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && mode === 'commenting') {
@@ -659,28 +658,6 @@ export function AnnotationOverlay({ endpoint, frames }: AnnotationOverlayProps) 
         )
       })}
 
-      {/* Toast */}
-      {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: S.xxl,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 99999,
-            padding: `${S.sm}px ${S.xxl}px`,
-            background: N.txtPri,
-            color: 'oklch(1 0 0)',
-            borderRadius: R.pill,
-            fontSize: T.title,
-            fontWeight: 500,
-            fontFamily: FONT,
-            boxShadow: `0 2px ${S.md}px rgba(0, 0, 0, 0.12)`,
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </>
   )
 }

@@ -22,12 +22,42 @@ interface CanvaiShellProps {
   annotationEndpoint?: string
 }
 
+const PROJECT_KEY = 'canvai:active-project'
+
+function loadProjectIndex(max: number): number {
+  try {
+    const saved = localStorage.getItem(PROJECT_KEY)
+    if (saved !== null) {
+      const idx = Number(saved)
+      if (idx >= 0 && idx < max) return idx
+    }
+  } catch {}
+  return 0
+}
+
 export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:4748' }: CanvaiShellProps) {
-  const [activeProjectIndex, setActiveProjectIndex] = useState(0)
+  const [activeProjectIndex, setActiveProjectIndex] = useState(() => loadProjectIndex(manifests.length))
+  // Persist active project selection
+  useEffect(() => {
+    try { localStorage.setItem(PROJECT_KEY, String(activeProjectIndex)) } catch {}
+  }, [activeProjectIndex])
+
   const [commentCount, setCommentCount] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [iterDialogOpen, setIterDialogOpen] = useState(false)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  const showToast = useCallback((msg: string) => setToast(msg), [])
+
+  // Clear toast after 2s
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2000)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
 
   const handleNewProject = useCallback(async (payload: { name: string, description: string, prompt: string }) => {
     try {
@@ -36,24 +66,25 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'project', comment: JSON.stringify(payload) }),
       })
+      showToast('Project submitted')
     } catch {
-      // Server may be unavailable
+      showToast('Failed to submit')
     }
-  }, [annotationEndpoint])
+  }, [annotationEndpoint, showToast])
 
   const handleNewIteration = useCallback(async (prompt: string) => {
+    const projectName = activeProject?.project ?? ''
     try {
       await fetch(`${annotationEndpoint}/annotations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'iteration', comment: prompt }),
+        body: JSON.stringify({ type: 'iteration', comment: prompt, project: projectName }),
       })
+      showToast('Iteration submitted')
     } catch {
-      // Server may be unavailable
+      showToast('Failed to submit')
     }
-  }, [annotationEndpoint])
-
-  const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
+  }, [annotationEndpoint, showToast, activeProject])
   const { iterationIndex: activeIterationIndex, pageIndex: activePageIndex, setIteration: setActiveIterationIndex, setPage: setActivePageIndex } = useNavMemory(
     activeProject?.project ?? '',
     activeProject?.iterations ?? [],
@@ -123,6 +154,27 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
             onClose={() => setProjectDialogOpen(false)}
             onSubmit={handleNewProject}
           />
+        )}
+        {toast && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: S.xxl,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 99999,
+              padding: `${S.sm}px ${S.xxl}px`,
+              background: N.txtPri,
+              color: 'oklch(1 0 0)',
+              borderRadius: R.pill,
+              fontSize: T.title,
+              fontWeight: 500,
+              fontFamily: FONT,
+              boxShadow: `0 2px ${S.md}px rgba(0, 0, 0, 0.12)`,
+            }}
+          >
+            {toast}
+          </div>
         )}
       </div>
     )
@@ -196,7 +248,7 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         </div>
       </div>
 
-      {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={frames} />}
+      {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={frames} showToast={showToast} project={projectKey} />}
       <CommentOverlay endpoint={annotationEndpoint} frames={frames} onCommentCountChange={setCommentCount} />
       {import.meta.env.DEV && (
         <NewIterationDialog
@@ -211,6 +263,29 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
           onClose={() => setProjectDialogOpen(false)}
           onSubmit={handleNewProject}
         />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: S.xxl,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            padding: `${S.sm}px ${S.xxl}px`,
+            background: N.txtPri,
+            color: 'oklch(1 0 0)',
+            borderRadius: R.pill,
+            fontSize: T.title,
+            fontWeight: 500,
+            fontFamily: FONT,
+            boxShadow: `0 2px ${S.md}px rgba(0, 0, 0, 0.12)`,
+          }}
+        >
+          {toast}
+        </div>
       )}
     </div>
   )
