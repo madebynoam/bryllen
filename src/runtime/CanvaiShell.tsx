@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Canvas } from './Canvas'
 import { Frame } from './Frame'
 import { useFrames } from './useFrames'
@@ -35,6 +35,70 @@ function loadProjectIndex(max: number): number {
   return 0
 }
 
+/* ── Toast with spring enter / fade exit ── */
+
+const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+const TOAST_DURATION = 2000
+const ENTER_MS = 400
+const EXIT_MS = 250
+
+function Toast({ message, onDone }: { message: string; onDone: () => void }) {
+  const [phase, setPhase] = useState<'enter' | 'visible' | 'exit'>('enter')
+  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    // enter → visible
+    const enterTimer = setTimeout(() => setPhase('visible'), ENTER_MS)
+    return () => clearTimeout(enterTimer)
+  }, [])
+
+  useEffect(() => {
+    // visible → exit after TOAST_DURATION
+    if (phase !== 'enter') {
+      timerRef.current = setTimeout(() => setPhase('exit'), TOAST_DURATION)
+      return () => clearTimeout(timerRef.current)
+    }
+  }, [phase])
+
+  useEffect(() => {
+    // exit → unmount
+    if (phase === 'exit') {
+      const t = setTimeout(onDone, EXIT_MS)
+      return () => clearTimeout(t)
+    }
+  }, [phase, onDone])
+
+  const entering = phase === 'enter'
+  const exiting = phase === 'exit'
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: S.xxl,
+        left: '50%',
+        zIndex: 99999,
+        padding: `${S.sm}px ${S.xxl}px`,
+        background: N.txtPri,
+        color: 'oklch(1 0 0)',
+        borderRadius: R.pill,
+        fontSize: T.title,
+        fontWeight: 500,
+        fontFamily: FONT,
+        boxShadow: `0 2px ${S.md}px rgba(0, 0, 0, 0.12)`,
+        transform: `translateX(-50%) translateY(${entering ? '12px' : '0'})`,
+        opacity: entering || exiting ? 0 : 1,
+        transition: entering
+          ? `transform ${ENTER_MS}ms ${SPRING}, opacity ${ENTER_MS}ms ease-out`
+          : `opacity ${EXIT_MS}ms ease-in`,
+        pointerEvents: 'none',
+      }}
+    >
+      {message}
+    </div>
+  )
+}
+
 export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:4748' }: CanvaiShellProps) {
   const [activeProjectIndex, setActiveProjectIndex] = useState(() => loadProjectIndex(manifests.length))
   // Persist active project selection
@@ -49,13 +113,6 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   const [toast, setToast] = useState<string | null>(null)
 
   const showToast = useCallback((msg: string) => setToast(msg), [])
-
-  // Clear toast after 2s
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 2000)
-    return () => clearTimeout(t)
-  }, [toast])
 
   const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
 
@@ -155,27 +212,7 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
             onSubmit={handleNewProject}
           />
         )}
-        {toast && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: S.xxl,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 99999,
-              padding: `${S.sm}px ${S.xxl}px`,
-              background: N.txtPri,
-              color: 'oklch(1 0 0)',
-              borderRadius: R.pill,
-              fontSize: T.title,
-              fontWeight: 500,
-              fontFamily: FONT,
-              boxShadow: `0 2px ${S.md}px rgba(0, 0, 0, 0.12)`,
-            }}
-          >
-            {toast}
-          </div>
-        )}
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </div>
     )
   }
@@ -265,28 +302,7 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: S.xxl,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 99999,
-            padding: `${S.sm}px ${S.xxl}px`,
-            background: N.txtPri,
-            color: 'oklch(1 0 0)',
-            borderRadius: R.pill,
-            fontSize: T.title,
-            fontWeight: 500,
-            fontFamily: FONT,
-            boxShadow: `0 2px ${S.md}px rgba(0, 0, 0, 0.12)`,
-          }}
-        >
-          {toast}
-        </div>
-      )}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </div>
   )
 }
