@@ -715,14 +715,20 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
       {/* Connection lines layer */}
       <ConnectionsSvgLayer>
-        {/* Provisional drag line */}
-        {dragState && (
-          <ConnectionLine
-            from={dragState.fromPoint}
-            to={dragState.currentPoint}
-            provisional
-          />
-        )}
+        {/* Provisional drag line — only show after moving 10px (avoids flash on click) */}
+        {dragState && (() => {
+          const dx = dragState.currentPoint.x - dragState.startPoint.x
+          const dy = dragState.currentPoint.y - dragState.startPoint.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < 10) return null
+          return (
+            <ConnectionLine
+              from={dragState.fromPoint}
+              to={dragState.currentPoint}
+              provisional
+            />
+          )
+        })()}
 
         {/* Persisted connections */}
         {connections.map(conn => {
