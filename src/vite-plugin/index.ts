@@ -50,9 +50,24 @@ export function canvaiPlugin(): Plugin {
     name: 'canvai-manifests',
 
     config() {
+      // Read HTTP port from .canvai-ports.json or env var
+      let httpPort = 4748
+      try {
+        const portsPath = path.resolve(process.cwd(), '.canvai-ports.json')
+        if (fs.existsSync(portsPath)) {
+          const ports = JSON.parse(fs.readFileSync(portsPath, 'utf-8'))
+          httpPort = ports.http || 4748
+        }
+      } catch {}
+      // Also check env var
+      if (process.env.CANVAI_HTTP_PORT) {
+        httpPort = parseInt(process.env.CANVAI_HTTP_PORT, 10)
+      }
+
       return {
         define: {
           '__CANVAI_VERSION__': JSON.stringify(pkg.version),
+          '__CANVAI_HTTP_PORT__': JSON.stringify(httpPort),
         },
       }
     },
