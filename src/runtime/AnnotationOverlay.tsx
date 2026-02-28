@@ -13,6 +13,8 @@ interface DragState {
   fromPoint: { x: number; y: number }  // Center of the frame (for line drawing)
   startPoint: { x: number; y: number } // Initial mouse position (for click detection)
   currentPoint: { x: number; y: number }
+  // Multi-select: locked targets (Shift+hover locks a target, continue to add more)
+  lockedTargets: Array<{ frameId: string; point: { x: number; y: number } }>
 }
 
 interface TargetInfo {
@@ -311,10 +313,11 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     // Update drag state if dragging
     if (dragState) {
-      setDragState(prev => prev ? { ...prev, currentPoint: { x: e.clientX, y: e.clientY } } : null)
+      const overlay = overlayRef.current
+      let hoveredFrameId: string | null = null
+      let hoveredFrameRect: DOMRect | null = null
 
       // Check if hovering over another context image
-      const overlay = overlayRef.current
       if (overlay) {
         overlay.style.pointerEvents = 'none'
         const el = document.elementFromPoint(e.clientX, e.clientY)
@@ -323,14 +326,31 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
           const frameEl = el.closest('[data-frame-id]')
           if (frameEl) {
             const frameId = frameEl.getAttribute('data-frame-id') ?? ''
-            if (frameId !== dragState.fromFrameId && isContextImageFrame(frameId)) {
-              setHighlight(frameEl.getBoundingClientRect())
-              return
+            const alreadyLocked = dragState.lockedTargets.some(t => t.frameId === frameId)
+            if (frameId !== dragState.fromFrameId && !alreadyLocked && isContextImageFrame(frameId)) {
+              hoveredFrameId = frameId
+              hoveredFrameRect = frameEl.getBoundingClientRect()
             }
           }
         }
       }
-      setHighlight(null)
+
+      // Shift+hover locks the target
+      if (e.shiftKey && hoveredFrameId) {
+        const center = getFrameCenter(hoveredFrameId)
+        if (center) {
+          setDragState(prev => prev ? {
+            ...prev,
+            currentPoint: { x: e.clientX, y: e.clientY },
+            lockedTargets: [...prev.lockedTargets, { frameId: hoveredFrameId!, point: center }],
+          } : null)
+          setHighlight(null)
+          return
+        }
+      }
+
+      setDragState(prev => prev ? { ...prev, currentPoint: { x: e.clientX, y: e.clientY } } : null)
+      setHighlight(hoveredFrameRect)
       return
     }
 
@@ -389,6 +409,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             fromPoint: center,
             startPoint: { x: e.clientX, y: e.clientY },
             currentPoint: { x: e.clientX, y: e.clientY },
+            lockedTargets: [],
           })
           setHighlight(null)
           return
@@ -446,6 +467,9 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (!dragState) return
 
+    // Collect all target frames (locked + final hover target)
+    let allTargets = [...dragState.lockedTargets]
+
     const overlay = overlayRef.current
     if (overlay) {
       overlay.style.pointerEvents = 'none'
@@ -456,50 +480,67 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
         const frameEl = el.closest('[data-frame-id]')
         if (frameEl) {
           const toFrameId = frameEl.getAttribute('data-frame-id') ?? ''
+          const alreadyIncluded = toFrameId === dragState.fromFrameId || allTargets.some(t => t.frameId === toFrameId)
 
-          // If released on a different context image, create connection
-          if (toFrameId !== dragState.fromFrameId && isContextImageFrame(toFrameId)) {
-            const connectionId = `conn-${nextConnectionId.current++}`
-            const newConnection: Connection = {
-              id: connectionId,
-              fromFrameId: dragState.fromFrameId,
-              toFrameId,
+          // Add final hover target if it's a valid context image
+          if (!alreadyIncluded && isContextImageFrame(toFrameId)) {
+            const center = getFrameCenter(toFrameId)
+            if (center) {
+              allTargets.push({ frameId: toFrameId, point: center })
             }
-            setConnections(prev => [...prev, newConnection])
-            setEditingConnectionId(connectionId)
-
-            // Set target for the connection annotation dialog
-            const fromFrame = frames.find(f => f.id === dragState.fromFrameId)
-            const toFrame = frames.find(f => f.id === toFrameId)
-            const midPoint = {
-              x: (dragState.fromPoint.x + e.clientX) / 2,
-              y: (dragState.fromPoint.y + e.clientY) / 2,
-            }
-            setTarget({
-              frameId: `${dragState.fromFrameId}+${toFrameId}`,
-              componentName: 'Connection',
-              props: {
-                __connectionId: connectionId,
-                fromFrameId: dragState.fromFrameId,
-                toFrameId,
-                fromTitle: fromFrame?.title ?? dragState.fromFrameId,
-                toTitle: toFrame?.title ?? toFrameId,
-              },
-              selector: '',
-              elementTag: 'connection',
-              elementClasses: '',
-              elementText: '',
-              computedStyles: {},
-              rect: new DOMRect(midPoint.x, midPoint.y, 0, 0),
-            })
-            setComment('')
-            setHighlight(null)
-            setDragState(null)
-            setMode('commenting')
-            return
           }
         }
       }
+    }
+
+    // If we have targets, create connection(s)
+    if (allTargets.length > 0) {
+      const connectionId = `conn-${nextConnectionId.current++}`
+      const allFrameIds = [dragState.fromFrameId, ...allTargets.map(t => t.frameId)]
+
+      // For now, store as a single connection with multiple targets
+      // The Connection type will need to support this (or we create multiple connections)
+      const newConnection: Connection = {
+        id: connectionId,
+        fromFrameId: dragState.fromFrameId,
+        toFrameId: allTargets.length === 1 ? allTargets[0].frameId : allFrameIds.join('+'),
+      }
+      setConnections(prev => [...prev, newConnection])
+      setEditingConnectionId(connectionId)
+
+      // Build titles for all images
+      const allTitles = allFrameIds.map(id => {
+        const frame = frames.find(f => f.id === id)
+        return frame?.title?.split('/').pop() ?? id.replace('context-', '')
+      })
+
+      // Calculate center point for dialog positioning
+      const allPoints = [dragState.fromPoint, ...allTargets.map(t => t.point)]
+      const midPoint = {
+        x: allPoints.reduce((sum, p) => sum + p.x, 0) / allPoints.length,
+        y: allPoints.reduce((sum, p) => sum + p.y, 0) / allPoints.length,
+      }
+
+      setTarget({
+        frameId: allFrameIds.join('+'),
+        componentName: 'Connection',
+        props: {
+          __connectionId: connectionId,
+          frameIds: allFrameIds,
+          titles: allTitles,
+        },
+        selector: '',
+        elementTag: 'connection',
+        elementClasses: '',
+        elementText: '',
+        computedStyles: {},
+        rect: new DOMRect(midPoint.x, midPoint.y, 0, 0),
+      })
+      setComment('')
+      setHighlight(null)
+      setDragState(null)
+      setMode('commenting')
+      return
     }
 
     // If no valid connection target, check if it was just a click (no significant drag)
@@ -534,7 +575,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     // Cancel drag
     setDragState(null)
     setHighlight(null)
-  }, [dragState, frames, isContextImageFrame])
+  }, [dragState, frames, isContextImageFrame, getFrameCenter])
 
   const handleApply = useCallback(async () => {
     if (!target || !comment.trim()) return
@@ -715,18 +756,58 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
       {/* Connection lines layer */}
       <ConnectionsSvgLayer>
-        {/* Provisional drag line — only show after moving 10px (avoids flash on click) */}
+        {/* Provisional drag lines — hub + spokes for multi-select */}
         {dragState && (() => {
           const dx = dragState.currentPoint.x - dragState.startPoint.x
           const dy = dragState.currentPoint.y - dragState.startPoint.y
           const dist = Math.sqrt(dx * dx + dy * dy)
-          if (dist < 10) return null
+          if (dist < 10 && dragState.lockedTargets.length === 0) return null
+
+          const hasLockedTargets = dragState.lockedTargets.length > 0
+
+          if (!hasLockedTargets) {
+            // Simple two-point line
+            return (
+              <ConnectionLine
+                from={dragState.fromPoint}
+                to={dragState.currentPoint}
+                provisional
+              />
+            )
+          }
+
+          // Multi-target: hub at source, spokes to each target + cursor
+          const allPoints = [
+            ...dragState.lockedTargets.map(t => t.point),
+            dragState.currentPoint,
+          ]
+
           return (
-            <ConnectionLine
-              from={dragState.fromPoint}
-              to={dragState.currentPoint}
-              provisional
-            />
+            <>
+              {/* Lines from source to each locked target */}
+              {dragState.lockedTargets.map((target, i) => (
+                <ConnectionLine
+                  key={target.frameId}
+                  from={dragState.fromPoint}
+                  to={target.point}
+                  provisional
+                />
+              ))}
+              {/* Line from source to current cursor */}
+              <ConnectionLine
+                from={dragState.fromPoint}
+                to={dragState.currentPoint}
+                provisional
+              />
+              {/* Hub circle at source */}
+              <circle
+                cx={dragState.fromPoint.x}
+                cy={dragState.fromPoint.y}
+                r={8}
+                fill={F.marker}
+                fillOpacity={0.8}
+              />
+            </>
           )
         })()}
 
@@ -797,7 +878,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: S.sm }}>
               <div style={{ fontSize: T.caption, color: N.txtTer, letterSpacing: '0.02em' }}>
                 {target.elementTag === 'connection'
-                  ? <>Combine: {(target.props as any).fromTitle?.split('/').pop()} + {(target.props as any).toTitle?.split('/').pop()}</>
+                  ? <>Combine: {((target.props as any).titles as string[] | undefined)?.join(' + ') ?? `${(target.props as any).fromTitle?.split('/').pop()} + ${(target.props as any).toTitle?.split('/').pop()}`}</>
                   : target.frameId
                     ? <>{target.componentName} &middot; {target.elementTag}</>
                     : 'Canvas note'}
