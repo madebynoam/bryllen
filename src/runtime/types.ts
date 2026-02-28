@@ -92,3 +92,11 @@ export function isImageFrame(frame: ManifestFrame): frame is ImageFrame {
 export function isCanvasImageFrame(frame: CanvasFrame): frame is CanvasImageFrame {
   return frame.type === 'image'
 }
+
+/** A connection between two context images */
+export interface Connection {
+  id: string
+  fromFrameId: string
+  toFrameId: string
+  annotationId?: string
+}

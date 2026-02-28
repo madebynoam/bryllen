@@ -2,10 +2,17 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { SquareMousePointer, Trash2 } from 'lucide-react'
 import { N, A, F, S, R, T, ICON, FONT } from './tokens'
 import { DialogCard, DialogActions, ActionButton } from './Menu'
-import type { CanvasFrame, CanvasComponentFrame } from './types'
+import type { CanvasFrame, CanvasComponentFrame, Connection } from './types'
 import { isCanvasImageFrame } from './types'
+import { ConnectionLine, ConnectionsSvgLayer } from './ConnectionLine'
 
 type Mode = 'idle' | 'targeting' | 'commenting'
+
+interface DragState {
+  fromFrameId: string
+  fromPoint: { x: number; y: number }
+  currentPoint: { x: number; y: number }
+}
 
 interface TargetInfo {
   frameId: string
@@ -179,6 +186,14 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   const cardRef = useRef<HTMLDivElement>(null)
   const nextMarkerId = useRef(1)
 
+  // Connection drag state
+  const [dragState, setDragState] = useState<DragState | null>(null)
+  const [connections, setConnections] = useState<Connection[]>([])
+  const [connectionRects, setConnectionRects] = useState<Map<string, { from: { x: number; y: number }; to: { x: number; y: number } }>>(new Map())
+  const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null)
+  const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null)
+  const nextConnectionId = useRef(1)
+
   const toast = useCallback((msg: string) => {
     if (externalToast) externalToast(msg)
   }, [externalToast])
@@ -253,7 +268,71 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     return () => cancelAnimationFrame(rafId)
   }, [markers])
 
+  // Recompute connection endpoints every frame via rAF
+  useEffect(() => {
+    if (connections.length === 0) return
+    let rafId = 0
+    function updateConnectionRects() {
+      const rects = new Map<string, { from: { x: number; y: number }; to: { x: number; y: number } }>()
+      for (const conn of connections) {
+        const fromEl = document.querySelector(`[data-frame-id="${conn.fromFrameId}"]`)
+        const toEl = document.querySelector(`[data-frame-id="${conn.toFrameId}"]`)
+        if (!fromEl || !toEl) continue
+        const fromRect = fromEl.getBoundingClientRect()
+        const toRect = toEl.getBoundingClientRect()
+        // Connect from center of each frame
+        rects.set(conn.id, {
+          from: { x: fromRect.left + fromRect.width / 2, y: fromRect.top + fromRect.height / 2 },
+          to: { x: toRect.left + toRect.width / 2, y: toRect.top + toRect.height / 2 },
+        })
+      }
+      setConnectionRects(rects)
+      rafId = requestAnimationFrame(updateConnectionRects)
+    }
+    rafId = requestAnimationFrame(updateConnectionRects)
+    return () => cancelAnimationFrame(rafId)
+  }, [connections])
+
+  /** Check if a frame is a context image */
+  const isContextImageFrame = useCallback((frameId: string): boolean => {
+    const frame = frames.find(f => f.id === frameId)
+    return frame ? isCanvasImageFrame(frame) : false
+  }, [frames])
+
+  /** Get center point of a frame element */
+  const getFrameCenter = useCallback((frameId: string): { x: number; y: number } | null => {
+    const el = document.querySelector(`[data-frame-id="${frameId}"]`)
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+  }, [])
+
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // Update drag state if dragging
+    if (dragState) {
+      setDragState(prev => prev ? { ...prev, currentPoint: { x: e.clientX, y: e.clientY } } : null)
+
+      // Check if hovering over another context image
+      const overlay = overlayRef.current
+      if (overlay) {
+        overlay.style.pointerEvents = 'none'
+        const el = document.elementFromPoint(e.clientX, e.clientY)
+        overlay.style.pointerEvents = 'auto'
+        if (el) {
+          const frameEl = el.closest('[data-frame-id]')
+          if (frameEl) {
+            const frameId = frameEl.getAttribute('data-frame-id') ?? ''
+            if (frameId !== dragState.fromFrameId && isContextImageFrame(frameId)) {
+              setHighlight(frameEl.getBoundingClientRect())
+              return
+            }
+          }
+        }
+      }
+      setHighlight(null)
+      return
+    }
+
     if (mode !== 'targeting') return
     const overlay = overlayRef.current
     if (!overlay) return
@@ -278,9 +357,9 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     // Empty canvas → show a small dot at cursor for "click to add note"
     const sz = 8
     setHighlight(new DOMRect(e.clientX - sz / 2, e.clientY - sz / 2, sz, sz))
-  }, [mode])
+  }, [mode, dragState, isContextImageFrame])
 
-  const handleClick = useCallback((e: React.PointerEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (mode !== 'targeting') return
     const overlay = overlayRef.current
     if (!overlay) return
@@ -297,11 +376,24 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     const frameEl = el.closest('[data-frame-id]')
 
     if (frameEl) {
-      // Clicked inside a frame — target the specific element
       const frameId = frameEl.getAttribute('data-frame-id') ?? ''
       const frame = frames.find(f => f.id === frameId)
 
-      // Handle image frames differently
+      // If it's a context image, start drag for potential connection
+      if (frame && isCanvasImageFrame(frame)) {
+        const center = getFrameCenter(frameId)
+        if (center) {
+          setDragState({
+            fromFrameId: frameId,
+            fromPoint: center,
+            currentPoint: { x: e.clientX, y: e.clientY },
+          })
+          setHighlight(null)
+          return
+        }
+      }
+
+      // Regular frame click — target the specific element
       const isImage = frame && isCanvasImageFrame(frame)
       const componentName = isImage
         ? 'Context Image'
@@ -326,9 +418,11 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
         computedStyles: getStyleSubset(el),
         rect: el.getBoundingClientRect(),
       })
+      setHighlight(null)
+      setComment('')
+      setMode('commenting')
     } else {
       // Clicked on empty canvas — canvas-level note
-      // Store canvas-space coords so the marker tracks pan/zoom
       const cp = screenToCanvas(e.clientX, e.clientY)
       setTarget({
         frameId: '',
@@ -341,20 +435,118 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
         computedStyles: {},
         rect: new DOMRect(e.clientX, e.clientY, 0, 0),
       })
+      setHighlight(null)
+      setComment('')
+      setMode('commenting')
+    }
+  }, [mode, frames, getFrameCenter])
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragState) return
+
+    const overlay = overlayRef.current
+    if (overlay) {
+      overlay.style.pointerEvents = 'none'
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      overlay.style.pointerEvents = 'auto'
+
+      if (el) {
+        const frameEl = el.closest('[data-frame-id]')
+        if (frameEl) {
+          const toFrameId = frameEl.getAttribute('data-frame-id') ?? ''
+
+          // If released on a different context image, create connection
+          if (toFrameId !== dragState.fromFrameId && isContextImageFrame(toFrameId)) {
+            const connectionId = `conn-${nextConnectionId.current++}`
+            const newConnection: Connection = {
+              id: connectionId,
+              fromFrameId: dragState.fromFrameId,
+              toFrameId,
+            }
+            setConnections(prev => [...prev, newConnection])
+            setEditingConnectionId(connectionId)
+
+            // Set target for the connection annotation dialog
+            const fromFrame = frames.find(f => f.id === dragState.fromFrameId)
+            const toFrame = frames.find(f => f.id === toFrameId)
+            const midPoint = {
+              x: (dragState.fromPoint.x + e.clientX) / 2,
+              y: (dragState.fromPoint.y + e.clientY) / 2,
+            }
+            setTarget({
+              frameId: `${dragState.fromFrameId}+${toFrameId}`,
+              componentName: 'Connection',
+              props: {
+                __connectionId: connectionId,
+                fromFrameId: dragState.fromFrameId,
+                toFrameId,
+                fromTitle: fromFrame?.title ?? dragState.fromFrameId,
+                toTitle: toFrame?.title ?? toFrameId,
+              },
+              selector: '',
+              elementTag: 'connection',
+              elementClasses: '',
+              elementText: '',
+              computedStyles: {},
+              rect: new DOMRect(midPoint.x, midPoint.y, 0, 0),
+            })
+            setComment('')
+            setHighlight(null)
+            setDragState(null)
+            setMode('commenting')
+            return
+          }
+        }
+      }
     }
 
+    // If no valid connection target, check if it was just a click (no significant drag)
+    const dx = e.clientX - dragState.fromPoint.x
+    const dy = e.clientY - dragState.fromPoint.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (dist < 10) {
+      // It was a click, not a drag — open single image annotation
+      const frame = frames.find(f => f.id === dragState.fromFrameId)
+      if (frame && isCanvasImageFrame(frame)) {
+        const frameEl = document.querySelector(`[data-frame-id="${dragState.fromFrameId}"]`)
+        setTarget({
+          frameId: dragState.fromFrameId,
+          componentName: 'Context Image',
+          props: { src: frame.src },
+          selector: 'img',
+          elementTag: 'img',
+          elementClasses: '',
+          elementText: '',
+          computedStyles: {},
+          rect: frameEl?.getBoundingClientRect() ?? new DOMRect(e.clientX, e.clientY, 0, 0),
+        })
+        setComment('')
+        setHighlight(null)
+        setDragState(null)
+        setMode('commenting')
+        return
+      }
+    }
+
+    // Cancel drag
+    setDragState(null)
     setHighlight(null)
-    setComment('')
-    setMode('commenting')
-  }, [mode, frames])
+  }, [dragState, frames, isContextImageFrame])
 
   const handleApply = useCallback(async () => {
     if (!target || !comment.trim()) return
 
-    // Strip internal __canvasPoint from props before sending to server
-    const { __canvasPoint: _cp, ...serverProps } = target.props as any
+    // Check if this is a connection annotation
+    const isConnection = target.elementTag === 'connection'
+    const connectionId = (target.props as any)?.__connectionId as string | undefined
+
+    // Strip internal props before sending to server
+    const { __canvasPoint: _cp, __connectionId: _connId, ...serverProps } = target.props as any
+
     const body = {
       project,
+      type: isConnection ? 'connection' : undefined,
       frameId: target.frameId,
       componentName: target.componentName,
       props: serverProps,
@@ -374,25 +566,34 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       })
       const annotation = await res.json()
       const serverId = annotation.id as string
-      const canvasPoint = (target.props as any)?.__canvasPoint as { x: number; y: number } | undefined
-      if (editingMarkerId !== null) {
-        // Update existing marker
-        setMarkers(prev => prev.map(m =>
-          m.id === editingMarkerId
-            ? { ...m, serverId, frameId: target.frameId, selector: target.selector, comment: comment.trim(), canvasPoint }
-            : m
+
+      if (isConnection && connectionId) {
+        // Update connection with annotation ID
+        setConnections(prev => prev.map(c =>
+          c.id === connectionId ? { ...c, annotationId: serverId } : c
         ))
+        setEditingConnectionId(null)
       } else {
-        // Add new annotation marker
-        const id = nextMarkerId.current++
-        setMarkers(prev => [...prev, {
-          id,
-          serverId,
-          frameId: target.frameId,
-          selector: target.selector,
-          comment: comment.trim(),
-          canvasPoint,
-        }])
+        const canvasPoint = (target.props as any)?.__canvasPoint as { x: number; y: number } | undefined
+        if (editingMarkerId !== null) {
+          // Update existing marker
+          setMarkers(prev => prev.map(m =>
+            m.id === editingMarkerId
+              ? { ...m, serverId, frameId: target.frameId, selector: target.selector, comment: comment.trim(), canvasPoint }
+              : m
+          ))
+        } else {
+          // Add new annotation marker
+          const id = nextMarkerId.current++
+          setMarkers(prev => [...prev, {
+            id,
+            serverId,
+            frameId: target.frameId,
+            selector: target.selector,
+            comment: comment.trim(),
+            canvasPoint,
+          }])
+        }
       }
       toast('Saved')
     } catch {
@@ -406,12 +607,22 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   }, [target, comment, endpoint, editingMarkerId, toast, project])
 
   const handleCancel = useCallback(() => {
+    // If canceling a new connection, remove it
+    if (editingConnectionId) {
+      const conn = connections.find(c => c.id === editingConnectionId)
+      if (conn && !conn.annotationId) {
+        // Connection was never saved, remove it
+        setConnections(prev => prev.filter(c => c.id !== editingConnectionId))
+      }
+    }
     setMode('idle')
     setTarget(null)
     setHighlight(null)
     setComment('')
     setEditingMarkerId(null)
-  }, [])
+    setEditingConnectionId(null)
+    setDragState(null)
+  }, [editingConnectionId, connections])
 
   const handleDelete = useCallback(() => {
     if (editingMarkerId === null) return
@@ -468,22 +679,23 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   return (
     <>
       {/* Targeting overlay — captures all pointer events */}
-      {mode === 'targeting' && (
+      {(mode === 'targeting' || dragState) && (
         <div
           ref={overlayRef}
           onPointerMove={handlePointerMove}
-          onPointerDown={handleClick}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 99998,
-            cursor: 'crosshair',
+            cursor: dragState ? 'grabbing' : 'crosshair',
           }}
         />
       )}
 
       {/* Highlight box */}
-      {highlight && mode === 'targeting' && (
+      {highlight && (mode === 'targeting' || dragState) && (
         <div
           style={{
             position: 'fixed',
@@ -498,6 +710,63 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
           }}
         />
       )}
+
+      {/* Connection lines layer */}
+      <ConnectionsSvgLayer>
+        {/* Provisional drag line */}
+        {dragState && (
+          <ConnectionLine
+            from={dragState.fromPoint}
+            to={dragState.currentPoint}
+            provisional
+          />
+        )}
+
+        {/* Persisted connections */}
+        {connections.map(conn => {
+          const points = connectionRects.get(conn.id)
+          if (!points) return null
+          return (
+            <ConnectionLine
+              key={conn.id}
+              from={points.from}
+              to={points.to}
+              hovered={hoveredConnectionId === conn.id}
+              onClick={() => {
+                // Open annotation dialog for this connection
+                const fromFrame = frames.find(f => f.id === conn.fromFrameId)
+                const toFrame = frames.find(f => f.id === conn.toFrameId)
+                setTarget({
+                  frameId: `${conn.fromFrameId}+${conn.toFrameId}`,
+                  componentName: 'Connection',
+                  props: {
+                    __connectionId: conn.id,
+                    fromFrameId: conn.fromFrameId,
+                    toFrameId: conn.toFrameId,
+                    fromTitle: fromFrame?.title ?? conn.fromFrameId,
+                    toTitle: toFrame?.title ?? conn.toFrameId,
+                  },
+                  selector: '',
+                  elementTag: 'connection',
+                  elementClasses: '',
+                  elementText: '',
+                  computedStyles: {},
+                  rect: new DOMRect(
+                    (points.from.x + points.to.x) / 2,
+                    (points.from.y + points.to.y) / 2,
+                    0, 0
+                  ),
+                })
+                setEditingConnectionId(conn.id)
+                setComment('')
+                setMode('commenting')
+              }}
+              onMouseEnter={() => setHoveredConnectionId(conn.id)}
+              onMouseLeave={() => setHoveredConnectionId(null)}
+            />
+          )
+        })}
+      </ConnectionsSvgLayer>
 
       {/* Comment card — positioned near target element */}
       {cardVisible && target && (() => {
@@ -519,7 +788,11 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             {/* Header: component·tag + delete icon (when re-editing) */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: S.sm }}>
               <div style={{ fontSize: T.caption, color: N.txtTer, letterSpacing: '0.02em' }}>
-                {target.frameId ? <>{target.componentName} &middot; {target.elementTag}</> : 'Canvas note'}
+                {target.elementTag === 'connection'
+                  ? <>Combine: {(target.props as any).fromTitle?.split('/').pop()} + {(target.props as any).toTitle?.split('/').pop()}</>
+                  : target.frameId
+                    ? <>{target.componentName} &middot; {target.elementTag}</>
+                    : 'Canvas note'}
               </div>
               {editingMarkerId !== null && (
                 <HoverButton
@@ -540,7 +813,13 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               ref={textareaRef}
               value={comment}
               onChange={e => setComment(e.target.value)}
-              placeholder={target.frameId ? 'Describe the change...' : 'Add a note...'}
+              placeholder={
+                target.elementTag === 'connection'
+                  ? 'How should these be combined?'
+                  : target.frameId
+                    ? 'Describe the change...'
+                    : 'Add a note...'
+              }
               style={{
                 width: '100%',
                 minHeight: 72,
