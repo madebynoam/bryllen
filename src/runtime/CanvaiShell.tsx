@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { X } from 'lucide-react'
 import { Canvas } from './Canvas'
 import { Frame } from './Frame'
 import { useFrames } from './useFrames'
@@ -99,6 +100,71 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   )
 }
 
+/* ── Context image with hover delete ── */
+const ContextImageContent = memo(function ContextImageContent({
+  src,
+  title,
+  onDelete,
+}: {
+  src: string
+  title: string
+  onDelete: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <img
+        src={src}
+        alt={title}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          borderRadius: 8,
+        }}
+      />
+      {hovered && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            onDelete()
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+          }}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            border: 'none',
+            background: 'oklch(0.20 0 0 / 0.8)',
+            color: 'oklch(0.95 0 0)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'default',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            zIndex: 99999,
+            pointerEvents: 'auto',
+          }}
+        >
+          <X size={14} strokeWidth={2} />
+        </button>
+      )}
+    </div>
+  )
+})
+
 export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:4748' }: CanvaiShellProps) {
   const [activeProjectIndex, setActiveProjectIndex] = useState(() => loadProjectIndex(manifests.length))
   // Persist active project selection
@@ -171,21 +237,47 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
     fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}`)
       .then(r => r.json())
       .then(data => {
+        console.log('[canvai] Loaded context data:', data)
         if (data.images && Array.isArray(data.images)) {
-          setContextImages(data.images.map((img: { filename: string; path: string }, i: number) => ({
-            type: 'image' as const,
-            id: `context-${img.filename}`,
-            title: img.filename,
-            src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&filename=${encodeURIComponent(img.filename)}`,
-            x: 50 + (i % 4) * 320,
-            y: 50 + Math.floor(i / 4) * 320,
-            width: 300,
-            height: 300,
-          })))
+          const positions = data.positions || {}
+          setContextImages(data.images.map((img: { filename: string; path: string }, i: number) => {
+            const saved = positions[img.filename]
+            console.log('[canvai] Image', img.filename, 'saved pos:', saved)
+            return {
+              type: 'image' as const,
+              id: `context-${img.filename}`,
+              title: img.filename,
+              src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&filename=${encodeURIComponent(img.filename)}`,
+              x: saved?.x ?? 50 + (i % 4) * 320,
+              y: saved?.y ?? 50 + Math.floor(i / 4) * 320,
+              width: saved?.width ?? 300,
+              height: saved?.height ?? 300,
+            }
+          }))
         }
       })
       .catch(() => setContextImages([]))
   }, [activeProject?.project, iterationName, annotationEndpoint])
+
+  // Save context image positions (debounced)
+  const savePositionsRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => {
+    if (!activeProject?.project || contextImages.length === 0) return
+    clearTimeout(savePositionsRef.current)
+    savePositionsRef.current = setTimeout(() => {
+      const positions: Record<string, { x: number; y: number; width: number; height: number }> = {}
+      for (const img of contextImages) {
+        const filename = img.title
+        positions[filename] = { x: img.x, y: img.y, width: img.width, height: img.height }
+      }
+      console.log('[canvai] Saving context positions:', positions)
+      fetch(`${annotationEndpoint}/context-positions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: activeProject.project, iteration: iterationName, positions }),
+      }).then(r => console.log('[canvai] Save result:', r.ok)).catch(e => console.error('[canvai] Save error:', e))
+    }, 300)
+  }, [contextImages, activeProject?.project, iterationName, annotationEndpoint])
 
   // Handle image paste — save to server and add to context
   const handleImagePaste = useCallback(async (dataUrl: string, filename: string) => {
@@ -223,6 +315,25 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
       showToast('Failed to save image')
     }
   }, [activeProject?.project, iterationName, annotationEndpoint, contextImages.length, showToast])
+
+  // Handle context image deletion
+  const handleDeleteContextImage = useCallback(async (imageId: string, filename: string) => {
+    if (!activeProject?.project) return
+
+    try {
+      const res = await fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&filename=${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setContextImages(prev => prev.filter(img => img.id !== imageId))
+        showToast('Image deleted')
+      } else {
+        showToast('Failed to delete image')
+      }
+    } catch {
+      showToast('Failed to delete image')
+    }
+  }, [activeProject?.project, iterationName, annotationEndpoint, showToast])
 
   const projectKey = activeProject?.project ?? ''
   const [canvasBg, setCanvasBg] = useState(() => loadCanvasBg(projectKey) ?? N.canvas)
@@ -368,14 +479,12 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
                     ))
                   }}
                 >
-                  <img
+                  <ContextImageContent
                     src={img.src}
-                    alt={img.title}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      borderRadius: 8,
+                    title={img.title}
+                    onDelete={() => {
+                      const filename = img.id.replace('context-', '')
+                      handleDeleteContextImage(img.id, filename)
                     }}
                   />
                 </Frame>

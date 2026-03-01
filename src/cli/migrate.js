@@ -14,7 +14,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { migrations } from './migrations/index.js'
 
-const MARKER = '.canvai'
+const MARKER = '.canvai-version'
 
 /** Compare two semver-ish strings. Returns -1 | 0 | 1 */
 export function compareSemver(a, b) {

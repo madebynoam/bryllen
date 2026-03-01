@@ -62,7 +62,7 @@ Each iteration owns a complete token set scoped under `.iter-v<N>`. No cascade a
 3. **Check `components/index.ts`** — component exists? If not, create first.
 4. **New components** — add to barrel AND to Components showcase page.
 5. **Log to `CHANGELOG.md`**.
-6. **Auto-commit** — `resolve_annotation` auto-stages and commits. No manual git needed.
+6. **Auto-commit** — `npx canvai resolve <id>` auto-stages and commits. No manual git needed.
 
 ## Design directions
 
@@ -115,13 +115,13 @@ Designers can paste images (Cmd+V) onto the canvas as visual inspiration. These 
 
 ### Using context images in generation
 
-Before generating designs, call `get_context_images` to retrieve inspiration images:
+Before generating designs, run:
 
-```
-get_context_images({ project: "my-project", iteration: "v1" })
+```bash
+npx canvai context --project my-project --iteration v1
 ```
 
-This returns base64 images you can analyze via Vision. Look for:
+This returns image paths. Read them with the Read tool to analyze via Vision. Look for:
 - Color palettes and usage patterns
 - Typography styles and hierarchy
 - Layout patterns and spacing
@@ -149,12 +149,36 @@ Drafts created on Save, visible in TopBar dropdown. "Apply" promotes to pending 
 2. Follow guard protocol
 3. Map to file in `v<N>/components/` or `v<N>/pages/`
 4. **Route visual changes through tokens** — find/create semantic token in `tokens.css`, never hardcode values
-5. `resolve_annotation` with annotation ID (auto-commits)
+5. Run `npx canvai resolve <id>` (auto-commits)
 6. Log to `CHANGELOG.md`
 
 ### Processing project annotations (`type: 'project'`)
 
 Parse JSON comment `{ name, description, prompt }`, create project folder, generate initial design if prompted, resolve.
+
+## CLI Commands (for agent use)
+
+All annotation commands output JSON for easy parsing:
+
+```bash
+# Wait for next annotation (15s default timeout)
+npx canvai watch [--timeout N]
+
+# Mark annotation as resolved (auto-commits)
+npx canvai resolve <id>
+
+# List pending annotations
+npx canvai pending
+
+# List all annotations
+npx canvai list
+
+# Screenshot canvas
+npx canvai screenshot [--frame <id>] [--delay <ms>]
+
+# Get context image paths
+npx canvai context --project <name> --iteration <v>
+```
 
 ## Skills
 

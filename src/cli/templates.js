@@ -212,12 +212,4 @@ dist
 .canvai
 `
 
-export const mcpJson = `{
-  "mcpServers": {
-    "canvai-annotations": {
-      "command": "node",
-      "args": ["node_modules/canvai/src/mcp/mcp-server.js"]
-    }
-  }
-}
-`
+// MCP removed in favor of CLI commands — no .mcp.json needed

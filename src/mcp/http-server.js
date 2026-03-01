@@ -285,7 +285,7 @@ function sendJson(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   })
   res.end(JSON.stringify(data))
@@ -716,7 +716,7 @@ const httpServer = createServer(async (req, res) => {
       const contextDir = join(process.cwd(), 'src', 'projects', project, iteration, 'context')
 
       if (!existsSync(contextDir)) {
-        sendJson(res, 200, { images: [] })
+        sendJson(res, 200, { images: [], positions: {} })
         return
       }
 
@@ -725,6 +725,15 @@ const httpServer = createServer(async (req, res) => {
         /\.(png|jpg|jpeg|gif|webp)$/i.test(f)
       )
 
+      // Load positions from positions.json if it exists
+      const positionsFile = join(contextDir, 'positions.json')
+      let positions = {}
+      if (existsSync(positionsFile)) {
+        try {
+          positions = JSON.parse(readFileSync(positionsFile, 'utf8'))
+        } catch {}
+      }
+
       const images = files.map(filename => ({
         filename,
         path: `context/${filename}`,
@@ -732,7 +741,34 @@ const httpServer = createServer(async (req, res) => {
         url: `/context-image?project=${encodeURIComponent(project)}&iteration=${encodeURIComponent(iteration)}&filename=${encodeURIComponent(filename)}`,
       }))
 
-      sendJson(res, 200, { images })
+      sendJson(res, 200, { images, positions })
+      return
+    }
+
+    // PUT /context-positions — save context image positions
+    if (req.method === 'PUT' && url.pathname === '/context-positions') {
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const { project, iteration, positions } = JSON.parse(body)
+          if (!project || !iteration || !positions) {
+            sendJson(res, 400, { error: 'project, iteration, and positions are required' })
+            return
+          }
+
+          const contextDir = join(process.cwd(), 'src', 'projects', project, iteration, 'context')
+          if (!existsSync(contextDir)) {
+            mkdirSync(contextDir, { recursive: true })
+          }
+
+          const positionsFile = join(contextDir, 'positions.json')
+          writeFileSync(positionsFile, JSON.stringify(positions, null, 2))
+          sendJson(res, 200, { saved: true })
+        } catch (err) {
+          sendJson(res, 500, { error: err.message })
+        }
+      })
       return
     }
 
@@ -766,6 +802,31 @@ const httpServer = createServer(async (req, res) => {
         'Cache-Control': 'max-age=3600',
       })
       res.end(imageData)
+      return
+    }
+
+    // DELETE /context — delete a context image
+    if (req.method === 'DELETE' && url.pathname === '/context') {
+      const project = url.searchParams.get('project')
+      const iteration = url.searchParams.get('iteration')
+      const filename = url.searchParams.get('filename')
+
+      if (!project || !iteration || !filename) {
+        sendJson(res, 400, { error: 'project, iteration, and filename query params are required' })
+        return
+      }
+
+      const filepath = join(process.cwd(), 'src', 'projects', project, iteration, 'context', filename)
+
+      if (!existsSync(filepath)) {
+        sendJson(res, 404, { error: 'Image not found' })
+        return
+      }
+
+      const { unlinkSync } = await import('fs')
+      unlinkSync(filepath)
+      console.log(`[canvai] Context image deleted: ${filepath}`)
+      sendJson(res, 200, { deleted: true, filename })
       return
     }
 

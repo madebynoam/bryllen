@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 
 const NAV_KEY = 'canvai:nav:'
-const SYSTEM_PAGES = ['Tokens', 'Components']
+const SYSTEM_PAGES = ['Tokens', 'Components', 'Context']
+// In DEV mode, Context page is added dynamically, so allow +1 on page index
+const DEV_EXTRA_PAGES = import.meta.env.DEV ? 1 : 0
 
 interface NavState {
   iteration: number
@@ -33,7 +35,7 @@ function resolveNav(project: string, iterations: { name: string; pages: { name: 
       return { iteration: latestIdx, page: firstContentPage(pages) }
     }
     const iter = iterations[saved.iteration]
-    if (saved.page < (iter?.pages?.length ?? 0)) return saved
+    if (saved.page < (iter?.pages?.length ?? 0) + DEV_EXTRA_PAGES) return saved
   }
   const pages = iterations[latestIdx]?.pages ?? []
   return { iteration: latestIdx, page: firstContentPage(pages) }

@@ -179,9 +179,24 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
   }
 
   // All pointer + wheel handlers as native listeners — bypasses React synthetic events
+  // Viewport is saved at gesture end (pointerup, wheel idle) + on page switch + beforeunload
+  const wheelIdleRef = useRef<ReturnType<typeof setTimeout>>()
+  const pageKeyRef = useRef(pageKey)
+  pageKeyRef.current = pageKey
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+
+    // Save viewport after wheel gesture settles
+    function saveAfterWheel() {
+      clearTimeout(wheelIdleRef.current)
+      wheelIdleRef.current = setTimeout(() => {
+        if (pageKeyRef.current) {
+          saveViewport(pageKeyRef.current, panRef.current.x, panRef.current.y, zoomRef.current)
+        }
+      }, 300)
+    }
 
     // --- Wheel: zoom + pan ---
     function handleWheel(e: WheelEvent) {
@@ -216,6 +231,7 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
         applyTransform(newPan, zoomRef.current)
         commitState(newPan, zoomRef.current)
       }
+      saveAfterWheel()
     }
 
     // --- Pointer: drag to pan ---
@@ -244,6 +260,10 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
       isDraggingRef.current = false
       container!.style.cursor = 'default'
       commitState(panRef.current, zoomRef.current)
+      // Save viewport at end of drag
+      if (pageKeyRef.current) {
+        saveViewport(pageKeyRef.current, panRef.current.x, panRef.current.y, zoomRef.current)
+      }
     }
 
     container.addEventListener('wheel', handleWheel, { passive: false })

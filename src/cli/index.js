@@ -20,11 +20,200 @@ import {
   claudeSettingsJson,
   claudeMd,
   gitignore,
-  mcpJson,
 } from './templates.js'
 import { runMigrations, writeMarker, getCanvaiVersion } from './migrate.js'
 
 const command = process.argv[2]
+const subcommand = process.argv[3]
+
+// ─── HTTP helpers ───────────────────────────────────────────────────────────
+
+function getHttpPort() {
+  try {
+    const ports = JSON.parse(readFileSync(join(process.cwd(), '.canvai-ports.json'), 'utf8'))
+    return ports.http || 4748
+  } catch {
+    return 4748
+  }
+}
+
+async function httpGet(path) {
+  const port = getHttpPort()
+  const res = await fetch(`http://localhost:${port}${path}`)
+  return res.json()
+}
+
+async function httpPost(path) {
+  const port = getHttpPort()
+  const res = await fetch(`http://localhost:${port}${path}`, { method: 'POST' })
+  return res.json()
+}
+
+// ─── Annotation CLI commands ────────────────────────────────────────────────
+
+async function watchAnnotations() {
+  const args = process.argv.slice(3)
+  let timeout = 15000
+  const timeoutIdx = args.indexOf('--timeout')
+  if (timeoutIdx !== -1 && args[timeoutIdx + 1]) {
+    timeout = parseInt(args[timeoutIdx + 1], 10) * 1000
+  }
+
+  try {
+    const result = await httpGet(`/annotations/next?timeout=${timeout}`)
+
+    if (result.timeout) {
+      console.log(JSON.stringify({ timeout: true }))
+      return
+    }
+
+    // Output the annotation as JSON for Claude to parse
+    console.log(JSON.stringify(result, null, 2))
+  } catch (err) {
+    console.error(JSON.stringify({ error: err.message, hint: 'Is canvai design running?' }))
+    process.exit(1)
+  }
+}
+
+async function resolveAnnotation() {
+  const id = process.argv[3]
+  if (!id) {
+    console.error('Usage: canvai resolve <id>')
+    process.exit(1)
+  }
+
+  try {
+    const result = await httpPost(`/annotations/${id}/resolve`)
+    if (result.error) {
+      console.error(JSON.stringify({ error: `Annotation #${id} not found` }))
+      process.exit(1)
+    }
+    console.log(JSON.stringify({ resolved: true, id, comment: result.comment }))
+  } catch (err) {
+    console.error(JSON.stringify({ error: err.message }))
+    process.exit(1)
+  }
+}
+
+async function pendingAnnotations() {
+  try {
+    const pending = await httpGet('/annotations?status=pending')
+    console.log(JSON.stringify(pending, null, 2))
+  } catch (err) {
+    console.error(JSON.stringify({ error: err.message, hint: 'Is canvai design running?' }))
+    process.exit(1)
+  }
+}
+
+async function listAnnotations() {
+  try {
+    const all = await httpGet('/annotations')
+    console.log(JSON.stringify(all, null, 2))
+  } catch (err) {
+    console.error(JSON.stringify({ error: err.message, hint: 'Is canvai design running?' }))
+    process.exit(1)
+  }
+}
+
+async function screenshotCanvas() {
+  const args = process.argv.slice(3)
+  const params = new URLSearchParams()
+
+  const frameIdx = args.indexOf('--frame')
+  if (frameIdx !== -1 && args[frameIdx + 1]) {
+    params.set('frame', args[frameIdx + 1])
+  }
+
+  const delayIdx = args.indexOf('--delay')
+  if (delayIdx !== -1 && args[delayIdx + 1]) {
+    params.set('delay', args[delayIdx + 1])
+  }
+
+  try {
+    const qs = params.toString()
+    const result = await httpGet(`/screenshot${qs ? '?' + qs : ''}`)
+
+    if (result.error) {
+      if (result.install) {
+        console.log(JSON.stringify({ error: 'Playwright not installed', install: result.install }))
+      } else {
+        console.error(JSON.stringify({ error: result.error }))
+        process.exit(1)
+      }
+      return
+    }
+
+    console.log(JSON.stringify({ path: result.path }))
+  } catch (err) {
+    console.error(JSON.stringify({ error: err.message, hint: 'Is canvai design running?' }))
+    process.exit(1)
+  }
+}
+
+async function contextImages() {
+  const args = process.argv.slice(3)
+
+  let project = null
+  let iteration = 'v1'
+
+  const projectIdx = args.indexOf('--project')
+  if (projectIdx !== -1 && args[projectIdx + 1]) {
+    project = args[projectIdx + 1]
+  }
+
+  const iterIdx = args.indexOf('--iteration')
+  if (iterIdx !== -1 && args[iterIdx + 1]) {
+    iteration = args[iterIdx + 1]
+  }
+
+  // Auto-detect project if not specified
+  if (!project) {
+    const projectsDir = join(process.cwd(), 'src', 'projects')
+    if (existsSync(projectsDir)) {
+      const { readdirSync } = await import('fs')
+      const projects = readdirSync(projectsDir).filter(f => {
+        const stat = require('fs').statSync(join(projectsDir, f))
+        return stat.isDirectory() && !f.startsWith('.')
+      })
+      if (projects.length === 1) {
+        project = projects[0]
+      } else if (projects.length > 1) {
+        console.error(JSON.stringify({ error: 'Multiple projects found. Use --project <name>', projects }))
+        process.exit(1)
+      }
+    }
+  }
+
+  if (!project) {
+    console.error(JSON.stringify({ error: 'No project specified. Use --project <name>' }))
+    process.exit(1)
+  }
+
+  const contextDir = join(process.cwd(), 'src', 'projects', project, iteration, 'context')
+
+  if (!existsSync(contextDir)) {
+    console.log(JSON.stringify({ images: [], message: 'No context images found' }))
+    return
+  }
+
+  const { readdirSync } = await import('fs')
+  const files = readdirSync(contextDir).filter(f =>
+    /\.(png|jpg|jpeg|gif|webp)$/i.test(f)
+  )
+
+  if (files.length === 0) {
+    console.log(JSON.stringify({ images: [], message: 'No context images found' }))
+    return
+  }
+
+  // Return image paths (not base64 — Claude can read files directly)
+  const images = files.map(filename => ({
+    filename,
+    path: join(contextDir, filename),
+  }))
+
+  console.log(JSON.stringify({ images }, null, 2))
+}
 
 function scaffold() {
   const cwd = process.cwd()
@@ -42,7 +231,6 @@ function scaffold() {
     ['.claude/settings.json', claudeSettingsJson],
     ['CLAUDE.md', claudeMd],
     ['.gitignore', gitignore],
-    ['.mcp.json', mcpJson],
   ]
 
   let wrote = 0
@@ -67,9 +255,9 @@ function scaffold() {
     console.log('  created src/projects/')
   }
 
-  // Write .canvai version marker
+  // Write .canvai-version marker
   writeMarker(cwd, getCanvaiVersion())
-  console.log('  created .canvai')
+  console.log('  created .canvai-version')
 
   if (wrote === 0) {
     console.log('All scaffold files already exist — nothing to write.')
@@ -205,7 +393,7 @@ async function startDev() {
   console.log(`[canvai] HTTP server → :${httpPort}  Vite → :${vitePort}`)
 
   // Start Vite dev server on the chosen port
-  const vite = spawn('npx', ['vite', '--open', '--port', String(vitePort), '--strictPort'], {
+  const vite = spawn('npx', ['vite', '--port', String(vitePort), '--strictPort'], {
     cwd,
     stdio: 'inherit',
     shell: true,
@@ -264,13 +452,43 @@ switch (command) {
     }
     break
   }
+
+  // ─── Annotation CLI commands (replaces MCP) ─────────────────────────────────
+  case 'watch':
+    watchAnnotations()
+    break
+  case 'resolve':
+    resolveAnnotation()
+    break
+  case 'pending':
+    pendingAnnotations()
+    break
+  case 'list':
+    listAnnotations()
+    break
+  case 'screenshot':
+    screenshotCanvas()
+    break
+  case 'context':
+    contextImages()
+    break
+
   default:
     console.log('Canvai — design studio on an infinite canvas\n')
     console.log('Usage:')
-    console.log('  canvai new       Scaffold project files')
-    console.log('  canvai design    Start dev server + annotation server')
-    console.log('  canvai update    Update canvai to latest')
-    console.log('  canvai doctor    Check and fix project files')
-    console.log('  canvai help      Show this message')
+    console.log('  canvai new                  Scaffold project files')
+    console.log('  canvai design               Start dev server + annotation server')
+    console.log('  canvai update               Update canvai to latest')
+    console.log('  canvai doctor               Check and fix project files')
+    console.log('')
+    console.log('Annotation commands (for Claude Code agent):')
+    console.log('  canvai watch [--timeout N]  Wait for annotation (default 15s)')
+    console.log('  canvai resolve <id>         Mark annotation as resolved')
+    console.log('  canvai pending              List pending annotations')
+    console.log('  canvai list                 List all annotations')
+    console.log('  canvai screenshot [--frame <id>] [--delay <ms>]')
+    console.log('  canvai context [--project <name>] [--iteration <v>]')
+    console.log('')
+    console.log('  canvai help                 Show this message')
     process.exit(command === 'help' ? 0 : 1)
 }

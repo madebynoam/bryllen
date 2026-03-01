@@ -1,9 +1,8 @@
 {
   "name": "canvai",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "description": "Canvai — design studio on an infinite canvas with live React code",
   "author": {
     "name": "Noam Almosnino"
-  },
-  "mcpServers": "./.mcp.json"
+  }
 }
