@@ -60,6 +60,9 @@ import { FyllaDark } from './v7/pages/fylla-dark'
 import { Studio } from './v7/pages/studio'
 import { Atelier } from './v7/pages/atelier'
 import { Werkstatt } from './v7/pages/werkstatt'
+import { Playful } from './v7/pages/playful'
+import { Palette } from './v7/pages/palette'
+import { Mosaic } from './v7/pages/mosaic'
 import type { ProjectManifest } from '../../runtime/types'
 
 const manifest: ProjectManifest = {
@@ -440,6 +443,15 @@ const manifest: ProjectManifest = {
     {
       name: 'V7',
       pages: [
+        {
+          name: 'Playful Inspired',
+          grid: { columns: 3, columnWidth: 1440, rowHeight: 2400, gap: 40 },
+          frames: [
+            { id: 'v7-playful', title: 'Playful — Retro-modern, Colorful Icons', component: Playful, width: 1440, height: 2400 },
+            { id: 'v7-palette', title: 'Palette — Bold Color Blocks, Chunky', component: Palette, width: 1440, height: 2400 },
+            { id: 'v7-mosaic', title: 'Mosaic — Grid-heavy, Pastel Tones', component: Mosaic, width: 1440, height: 2400 },
+          ],
+        },
         {
           name: 'Studio Inspired',
           grid: { columns: 3, columnWidth: 1440, rowHeight: 2400, gap: 40 },
