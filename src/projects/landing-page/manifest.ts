@@ -57,6 +57,9 @@ import { Statement } from './v7/pages/statement'
 import { Vision } from './v7/pages/vision'
 import { FyllaLight } from './v7/pages/fylla-light'
 import { FyllaDark } from './v7/pages/fylla-dark'
+import { Studio } from './v7/pages/studio'
+import { Atelier } from './v7/pages/atelier'
+import { Werkstatt } from './v7/pages/werkstatt'
 import type { ProjectManifest } from '../../runtime/types'
 
 const manifest: ProjectManifest = {
@@ -437,6 +440,15 @@ const manifest: ProjectManifest = {
     {
       name: 'V7',
       pages: [
+        {
+          name: 'Studio Inspired',
+          grid: { columns: 3, columnWidth: 1440, rowHeight: 2400, gap: 40 },
+          frames: [
+            { id: 'v7-studio', title: 'Studio — Overlapping Cards, Bold Orange', component: Studio, width: 1440, height: 2400 },
+            { id: 'v7-atelier', title: 'Atelier — Warm Minimal, Serif Editorial', component: Atelier, width: 1440, height: 2400 },
+            { id: 'v7-werkstatt', title: 'Werkstatt — Geometric Bold, Black/Orange', component: Werkstatt, width: 1440, height: 2400 },
+          ],
+        },
         {
           name: 'Context Inspired',
           grid: { columns: 3, columnWidth: 1440, rowHeight: 2400, gap: 40 },
