@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
 /*  Atelier — Warm minimal with strong typography, subtle orange       */
-/*  Inspired by: gola.io context, refined editorial approach           */
+/*  Copy: Canvai landing page                                          */
 /* ------------------------------------------------------------------ */
 
 const SERIF = 'Georgia, "Times New Roman", serif'
@@ -30,7 +30,7 @@ function Nav() {
         fontFamily: SERIF,
         color: S.text,
         fontStyle: 'italic',
-      }}>Atelier</span>
+      }}>Canvai</span>
       <div style={{
         display: 'flex',
         gap: 48,
@@ -38,10 +38,10 @@ function Nav() {
         color: S.text,
         fontFamily: SANS,
       }}>
-        <span>Projects</span>
-        <span>Philosophy</span>
-        <span>Journal</span>
-        <span>Contact</span>
+        <span>Features</span>
+        <span>How it works</span>
+        <span>Docs</span>
+        <span>Pricing</span>
       </div>
     </nav>
   )
@@ -66,11 +66,11 @@ function Hero() {
           margin: 0,
           fontFamily: SERIF,
         }}>
-          Spaces that
+          Design that
           <br />
-          <em style={{ fontStyle: 'italic' }}>breathe</em> with
+          <em style={{ fontStyle: 'italic' }}>ships</em> as
           <br />
-          intention.
+          code.
         </h1>
         <p style={{
           fontSize: 15,
@@ -81,8 +81,9 @@ function Hero() {
           maxWidth: 400,
           fontFamily: SANS,
         }}>
-          We design interiors that honor both the craft of making
-          and the art of living. Each project is a study in restraint.
+          Canvai is a design canvas for Claude Code. Every frame
+          is a real React component. See multiple directions at once,
+          iterate with annotations, ship production-ready code.
         </p>
       </div>
       <div style={{
@@ -92,9 +93,18 @@ function Hero() {
         height: 480,
       }}>
         <div style={{
-          background: 'oklch(0.75 0.06 45)',
+          background: 'oklch(0.2 0 0)',
           borderRadius: 12,
-        }} />
+          display: 'flex',
+          alignItems: 'flex-end',
+          padding: 20,
+        }}>
+          <span style={{
+            fontSize: 12,
+            color: 'oklch(0.6 0 0)',
+            fontFamily: SANS,
+          }}>Direction A</span>
+        </div>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -104,12 +114,30 @@ function Hero() {
             flex: 1,
             background: S.accent,
             borderRadius: 12,
-          }} />
+            display: 'flex',
+            alignItems: 'flex-end',
+            padding: 20,
+          }}>
+            <span style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.7)',
+              fontFamily: SANS,
+            }}>Direction B</span>
+          </div>
           <div style={{
             flex: 1,
             background: 'oklch(0.88 0.03 75)',
             borderRadius: 12,
-          }} />
+            display: 'flex',
+            alignItems: 'flex-end',
+            padding: 20,
+          }}>
+            <span style={{
+              fontSize: 12,
+              color: S.textMuted,
+              fontFamily: SANS,
+            }}>Direction C</span>
+          </div>
         </div>
       </div>
     </section>
@@ -135,7 +163,7 @@ function Statement() {
           margin: 0,
           marginBottom: 32,
           fontFamily: SANS,
-        }}>Our approach</p>
+        }}>The problem</p>
         <h2 style={{
           fontSize: 42,
           fontWeight: 400,
@@ -144,22 +172,15 @@ function Statement() {
           margin: 0,
           fontFamily: SERIF,
         }}>
-          "Design should serve life, not demand attention.
-          The best spaces are those you feel before you see."
+          "Design tools produce mockups. AI tools produce one idea.
+          Canvai produces multiple real components you can ship."
         </h2>
-        <p style={{
-          fontSize: 13,
-          color: S.textMuted,
-          margin: 0,
-          marginTop: 32,
-          fontFamily: SANS,
-        }}>— Studio philosophy, 2018</p>
       </div>
     </section>
   )
 }
 
-function Projects() {
+function Features() {
   return (
     <section style={{
       padding: '100px 80px',
@@ -179,14 +200,14 @@ function Projects() {
             margin: 0,
             marginBottom: 12,
             fontFamily: SANS,
-          }}>Selected work</p>
+          }}>Features</p>
           <h3 style={{
             fontSize: 32,
             fontWeight: 400,
             color: S.text,
             margin: 0,
             fontFamily: SERIF,
-          }}>Recent projects</h3>
+          }}>Everything you need</h3>
         </div>
         <span style={{
           fontSize: 13,
@@ -194,7 +215,7 @@ function Projects() {
           fontFamily: SANS,
           borderBottom: `1px solid ${S.accent}`,
           paddingBottom: 2,
-        }}>View all work →</span>
+        }}>View documentation →</span>
       </div>
       <div style={{
         display: 'grid',
@@ -202,14 +223,14 @@ function Projects() {
         gap: 32,
       }}>
         {[
-          { name: 'Maison Lumière', type: 'Residential', color: 'oklch(0.82 0.04 80)' },
-          { name: 'Café Noir', type: 'Hospitality', color: 'oklch(0.25 0.02 40)' },
-          { name: 'Studio Blanc', type: 'Commercial', color: 'oklch(0.72 0.05 150)' },
-        ].map((project, i) => (
+          { name: 'Infinite Canvas', desc: 'Pan and zoom through your design space. No page limits.', color: 'oklch(0.82 0.04 80)' },
+          { name: 'Multiple Directions', desc: '3-5 distinct designs per prompt, side by side.', color: 'oklch(0.25 0.02 40)' },
+          { name: 'Context Images', desc: 'Drag inspiration onto the canvas. Claude sees it.', color: 'oklch(0.72 0.05 150)' },
+        ].map((feature, i) => (
           <div key={i}>
             <div style={{
-              height: 320,
-              background: project.color,
+              height: 240,
+              background: feature.color,
               borderRadius: 8,
               marginBottom: 20,
             }} />
@@ -220,13 +241,14 @@ function Projects() {
               margin: 0,
               marginBottom: 6,
               fontFamily: SERIF,
-            }}>{project.name}</h4>
+            }}>{feature.name}</h4>
             <p style={{
-              fontSize: 12,
+              fontSize: 13,
               color: S.textMuted,
               margin: 0,
+              lineHeight: 1.5,
               fontFamily: SANS,
-            }}>{project.type}</p>
+            }}>{feature.desc}</p>
           </div>
         ))}
       </div>
@@ -234,7 +256,7 @@ function Projects() {
   )
 }
 
-function Services() {
+function HowItWorks() {
   return (
     <section style={{
       padding: '100px 80px',
@@ -254,7 +276,7 @@ function Services() {
             margin: 0,
             marginBottom: 20,
             fontFamily: SANS,
-          }}>Services</p>
+          }}>How it works</p>
           <h3 style={{
             fontSize: 28,
             fontWeight: 400,
@@ -263,9 +285,9 @@ function Services() {
             margin: 0,
             fontFamily: SERIF,
           }}>
-            From concept
+            Prompt to
             <br />
-            to completion.
+            production.
           </h3>
         </div>
         <div style={{
@@ -274,17 +296,17 @@ function Services() {
           gap: '48px 64px',
         }}>
           {[
-            { num: '01', title: 'Space Planning', desc: 'Thoughtful layouts that maximize function and flow.' },
-            { num: '02', title: 'Material Selection', desc: 'Curated palettes of natural, enduring materials.' },
-            { num: '03', title: 'Custom Furniture', desc: 'Bespoke pieces designed for your specific space.' },
-            { num: '04', title: 'Project Management', desc: 'Seamless execution from design to installation.' },
-          ].map(service => (
-            <div key={service.num}>
+            { num: '01', title: 'Describe', desc: 'Tell Claude what you want. Add context images for inspiration.' },
+            { num: '02', title: 'Generate', desc: 'See 3-5 distinct directions appear on your canvas.' },
+            { num: '03', title: 'Annotate', desc: 'Click anywhere, describe changes. Watch them happen.' },
+            { num: '04', title: 'Ship', desc: 'Copy the React code directly into your project.' },
+          ].map(step => (
+            <div key={step.num}>
               <span style={{
                 fontSize: 11,
                 color: S.accent,
                 fontFamily: SANS,
-              }}>{service.num}</span>
+              }}>{step.num}</span>
               <h4 style={{
                 fontSize: 18,
                 fontWeight: 400,
@@ -293,14 +315,14 @@ function Services() {
                 marginTop: 12,
                 marginBottom: 8,
                 fontFamily: SERIF,
-              }}>{service.title}</h4>
+              }}>{step.title}</h4>
               <p style={{
                 fontSize: 13,
                 color: 'oklch(0.6 0 0)',
                 lineHeight: 1.6,
                 margin: 0,
                 fontFamily: SANS,
-              }}>{service.desc}</p>
+              }}>{step.desc}</p>
             </div>
           ))}
         </div>
@@ -309,7 +331,7 @@ function Services() {
   )
 }
 
-function Contact() {
+function CTA() {
   return (
     <section style={{
       padding: '100px 80px',
@@ -327,7 +349,7 @@ function Contact() {
           margin: 0,
           marginBottom: 24,
           fontFamily: SANS,
-        }}>Start a project</p>
+        }}>Get started</p>
         <h3 style={{
           fontSize: 42,
           fontWeight: 400,
@@ -337,27 +359,49 @@ function Contact() {
           marginBottom: 24,
           fontFamily: SERIF,
         }}>
-          Let's create
+          Design with
           <br />
-          something together.
+          Claude Code.
         </h3>
-        <button style={{
-          padding: '16px 32px',
-          background: S.accent,
-          color: 'white',
-          border: 'none',
-          borderRadius: 8,
-          fontSize: 14,
-          fontWeight: 500,
-          fontFamily: SANS,
-          cursor: 'default',
-        }}>Get in touch</button>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <button style={{
+            padding: '16px 32px',
+            background: S.accent,
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 500,
+            fontFamily: SANS,
+            cursor: 'default',
+          }}>Start free</button>
+          <button style={{
+            padding: '16px 32px',
+            background: 'transparent',
+            color: S.text,
+            border: `1px solid ${S.border}`,
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 500,
+            fontFamily: SANS,
+            cursor: 'default',
+          }}>View docs</button>
+        </div>
       </div>
       <div style={{
         height: 360,
-        background: 'oklch(0.85 0.04 55)',
+        background: 'oklch(0.92 0.02 75)',
         borderRadius: 12,
-      }} />
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <code style={{
+          fontSize: 15,
+          color: S.text,
+          fontFamily: 'SF Mono, Consolas, monospace',
+        }}>npx canvai new</code>
+      </div>
     </section>
   )
 }
@@ -376,7 +420,7 @@ function Footer() {
         fontFamily: SERIF,
         fontStyle: 'italic',
         color: S.text,
-      }}>Atelier</span>
+      }}>Canvai</span>
       <div style={{
         display: 'flex',
         gap: 40,
@@ -384,15 +428,15 @@ function Footer() {
         color: S.textMuted,
         fontFamily: SANS,
       }}>
-        <span>Instagram</span>
-        <span>Pinterest</span>
-        <span>LinkedIn</span>
+        <span>GitHub</span>
+        <span>Twitter</span>
+        <span>Discord</span>
       </div>
       <span style={{
         fontSize: 12,
         color: S.textMuted,
         fontFamily: SANS,
-      }}>© 2026 Atelier Studio</span>
+      }}>© 2026 Canvai</span>
     </footer>
   )
 }
@@ -409,9 +453,9 @@ export function Atelier() {
       <Nav />
       <Hero />
       <Statement />
-      <Projects />
-      <Services />
-      <Contact />
+      <Features />
+      <HowItWorks />
+      <CTA />
       <Footer />
     </div>
   )

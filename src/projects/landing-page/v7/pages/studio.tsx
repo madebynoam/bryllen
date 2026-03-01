@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
-/*  Studio — Furniture studio aesthetic with bold orange accent        */
-/*  Inspired by: gola.io context image, overlapping cards              */
+/*  Studio — Overlapping cards aesthetic with bold orange accent       */
+/*  Copy: Canvai landing page                                          */
 /* ------------------------------------------------------------------ */
 
 const SERIF = 'Georgia, "Times New Roman", serif'
@@ -34,7 +34,7 @@ function Nav() {
           fontWeight: 400,
           color: S.text,
           fontFamily: SERIF,
-        }}>— Studio</span>
+        }}>— Canvai</span>
       </div>
       <div style={{
         display: 'flex',
@@ -45,9 +45,9 @@ function Nav() {
         textTransform: 'uppercase',
         letterSpacing: 1,
       }}>
-        <span>Work</span>
-        <span>About</span>
-        <span>Contact</span>
+        <span>Features</span>
+        <span>Docs</span>
+        <span>Pricing</span>
       </div>
     </nav>
   )
@@ -77,10 +77,9 @@ function Hero() {
             lineHeight: 1.7,
             maxWidth: 320,
           }}>
-            Your house have many functions, which
-            requires that its device be ergonomic — This
-            begins to help you make the most of your
-            space.
+            Design canvas for Claude Code. Generate
+            real React components on an infinite surface —
+            multiple directions at once.
           </p>
           <h1 style={{
             fontSize: 96,
@@ -92,11 +91,11 @@ function Hero() {
             fontFamily: SERIF,
             marginTop: 100,
           }}>
-            — STU
+            — SEE
             <br />
-            ROMA
+            EVERY
             <br />
-            NEW /
+            DIR /
           </h1>
         </div>
 
@@ -105,7 +104,7 @@ function Hero() {
           position: 'relative',
           height: 500,
         }}>
-          {/* Back card - cream with image */}
+          {/* Back card - canvas preview */}
           <div style={{
             position: 'absolute',
             top: 0,
@@ -115,16 +114,23 @@ function Hero() {
             background: 'oklch(0.92 0.02 70)',
             borderRadius: 8,
             overflow: 'hidden',
+            padding: 16,
           }}>
-            {/* Chair placeholder */}
+            {/* Mini canvas grid */}
             <div style={{
-              width: '100%',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
               height: '100%',
-              background: 'linear-gradient(180deg, oklch(0.85 0.04 50) 0%, oklch(0.75 0.06 40) 100%)',
-            }} />
+            }}>
+              <div style={{ background: 'oklch(0.98 0.01 80)', borderRadius: 4 }} />
+              <div style={{ background: 'oklch(0.2 0 0)', borderRadius: 4 }} />
+              <div style={{ background: 'oklch(0.85 0.04 200)', borderRadius: 4 }} />
+              <div style={{ background: 'oklch(0.75 0.06 40)', borderRadius: 4 }} />
+            </div>
           </div>
 
-          {/* Front card - orange with nav */}
+          {/* Front card - orange with features */}
           <div style={{
             position: 'absolute',
             top: 80,
@@ -143,9 +149,9 @@ function Hero() {
               flexDirection: 'column',
               gap: 16,
             }}>
-              {['ABOUT US', 'BLOG', 'CONTACT'].map(item => (
+              {['INFINITE CANVAS', 'LIVE REACT', 'CONTEXT IMAGES'].map(item => (
                 <span key={item} style={{
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: 400,
                   color: 'white',
                   fontFamily: SERIF,
@@ -172,9 +178,9 @@ function Features() {
         gap: 40,
       }}>
         {[
-          { title: 'Interior decoration', items: ['Living spaces', 'Bedrooms', 'Kitchens'] },
-          { title: 'Details in projects', items: ['Materials', 'Lighting', 'Textures'] },
-          { title: 'Modern approach', items: ['Sustainable', 'Minimal', 'Timeless'] },
+          { title: 'Multiple directions', items: ['3-5 per prompt', 'Side by side', 'Compare instantly'] },
+          { title: 'Real components', items: ['React/TypeScript', 'Production-ready', 'Not mockups'] },
+          { title: 'Context images', items: ['Drag inspiration', 'Visual reference', 'Direct to output'] },
         ].map((section, i) => (
           <div key={i}>
             <h3 style={{
@@ -220,7 +226,25 @@ function Gallery() {
           height: 400,
           background: 'oklch(0.25 0.01 50)',
           borderRadius: 8,
-        }} />
+          padding: 32,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}>
+          <span style={{
+            fontSize: 11,
+            color: 'oklch(0.5 0 0)',
+            fontFamily: SANS,
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+          }}>How it works</span>
+          <span style={{
+            fontSize: 24,
+            color: S.textLight,
+            fontFamily: SERIF,
+            marginTop: 8,
+          }}>Prompt → Canvas → Code</span>
+        </div>
         <div style={{
           height: 400,
           background: 'oklch(0.88 0.03 70)',
@@ -245,14 +269,25 @@ function Gallery() {
             fontSize: 24,
             color: 'white',
             fontFamily: SERIF,
-          }}>View all
-            <br />projects →</span>
+          }}>View
+            <br />documentation →</span>
         </div>
         <div style={{
           height: 300,
           background: 'oklch(0.92 0.02 75)',
           borderRadius: 8,
-        }} />
+          padding: 32,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <code style={{
+            fontSize: 14,
+            color: S.text,
+            fontFamily: 'SF Mono, Consolas, monospace',
+            opacity: 0.6,
+          }}>npx canvai new my-project</code>
+        </div>
       </div>
     </section>
   )
@@ -276,7 +311,7 @@ function About() {
           margin: 0,
           marginBottom: 24,
           fontFamily: SANS,
-        }}>About us</p>
+        }}>Why Canvai</p>
         <p style={{
           fontSize: 24,
           fontWeight: 400,
@@ -285,9 +320,9 @@ function About() {
           margin: 0,
           fontFamily: SERIF,
         }}>
-          House must fully reflect
-          personality of the owner
-          — Which is why we...
+          Traditional design tools
+          produce mockups.
+          Canvai outputs code.
         </p>
       </div>
       <div style={{
@@ -303,9 +338,9 @@ function About() {
           margin: 0,
           fontFamily: SANS,
         }}>
-          We believe in design that speaks quietly but carries weight.
-          Every project is a conversation between space, light, and the
-          people who will live within it.
+          Every frame on the canvas is a real React component.
+          Claude Code generates production-ready TypeScript you can
+          copy directly into your project.
         </p>
         <button style={{
           padding: '14px 28px',
@@ -318,7 +353,7 @@ function About() {
           fontFamily: SANS,
           cursor: 'default',
           alignSelf: 'flex-start',
-        }}>Learn more</button>
+        }}>Get started free</button>
       </div>
     </section>
   )
@@ -337,7 +372,7 @@ function Footer() {
         fontSize: 16,
         fontFamily: SERIF,
         color: S.text,
-      }}>— Studio</span>
+      }}>— Canvai</span>
       <div style={{
         display: 'flex',
         gap: 32,
@@ -345,9 +380,9 @@ function Footer() {
         color: S.textMuted,
         fontFamily: SANS,
       }}>
-        <span>Instagram</span>
-        <span>Pinterest</span>
-        <span>Behance</span>
+        <span>GitHub</span>
+        <span>Twitter</span>
+        <span>Discord</span>
       </div>
       <span style={{
         fontSize: 12,

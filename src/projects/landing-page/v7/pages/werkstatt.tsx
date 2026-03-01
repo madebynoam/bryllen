@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
 /*  Werkstatt — Bold geometric with strong black/orange contrast       */
-/*  Inspired by: gola.io context, German design studio aesthetic       */
+/*  Copy: Canvai landing page                                          */
 /* ------------------------------------------------------------------ */
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif'
@@ -32,7 +32,7 @@ function Nav() {
         fontFamily: DISPLAY,
         textTransform: 'uppercase',
         letterSpacing: -0.5,
-      }}>WERK</span>
+      }}>CANVAI</span>
       <div style={{
         display: 'flex',
         gap: 32,
@@ -42,10 +42,10 @@ function Nav() {
         textTransform: 'uppercase',
         letterSpacing: 1.5,
       }}>
-        <span>Projects</span>
-        <span>Studio</span>
-        <span>Process</span>
-        <span>Contact</span>
+        <span>Features</span>
+        <span>Docs</span>
+        <span>Pricing</span>
+        <span>GitHub</span>
       </div>
     </nav>
   )
@@ -75,7 +75,7 @@ function Hero() {
             margin: 0,
             marginBottom: 32,
             fontFamily: SANS,
-          }}>Design studio / Est. 2019</p>
+          }}>Design canvas for Claude Code</p>
           <h1 style={{
             fontSize: 64,
             fontWeight: 700,
@@ -86,13 +86,13 @@ function Hero() {
             fontFamily: DISPLAY,
             textTransform: 'uppercase',
           }}>
-            WE
+            SEE
             <br />
-            MAKE
+            EVERY
             <br />
-            THINGS
+            DIRECTION
             <br />
-            <span style={{ color: S.bgOrange }}>WORK.</span>
+            <span style={{ color: S.bgOrange }}>AT ONCE.</span>
           </h1>
         </div>
         <p style={{
@@ -103,12 +103,12 @@ function Hero() {
           maxWidth: 320,
           fontFamily: SANS,
         }}>
-          Industrial design meets digital craft.
-          We build products that perform.
+          Multiple design directions on an infinite canvas.
+          Real React components, not mockups.
         </p>
       </div>
 
-      {/* Right: Orange with navigation */}
+      {/* Right: Orange with features */}
       <div style={{
         background: S.bgOrange,
         padding: '80px 60px',
@@ -121,7 +121,7 @@ function Hero() {
           flexDirection: 'column',
           gap: 8,
         }}>
-          {['FURNITURE', 'LIGHTING', 'OBJECTS', 'SPACES'].map((item, i) => (
+          {['INFINITE CANVAS', 'LIVE COMPONENTS', 'ANNOTATIONS', 'ITERATIONS'].map((item, i) => (
             <div key={item} style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -159,10 +159,10 @@ function Stats() {
       borderBottom: `1px solid ${S.border}`,
     }}>
       {[
-        { num: '127', label: 'Projects completed' },
-        { num: '12', label: 'Design awards' },
-        { num: '8', label: 'Countries' },
-        { num: '15', label: 'Team members' },
+        { num: '3-5', label: 'Directions per prompt' },
+        { num: '∞', label: 'Canvas size' },
+        { num: '0', label: 'Mockups to handoff' },
+        { num: '1', label: 'Click to annotate' },
       ].map(stat => (
         <div key={stat.label}>
           <span style={{
@@ -187,7 +187,7 @@ function Stats() {
   )
 }
 
-function Work() {
+function Features() {
   return (
     <section style={{
       padding: '80px 60px',
@@ -206,12 +206,12 @@ function Work() {
           fontFamily: SANS,
           textTransform: 'uppercase',
           letterSpacing: 2,
-        }}>Selected Work</h2>
+        }}>How It Works</h2>
         <span style={{
           fontSize: 12,
           color: S.textMuted,
           fontFamily: SANS,
-        }}>View archive →</span>
+        }}>View docs →</span>
       </div>
       <div style={{
         display: 'grid',
@@ -225,12 +225,17 @@ function Work() {
           gridRow: 'span 2',
           position: 'relative',
           overflow: 'hidden',
+          padding: 32,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}>
-          <div style={{
-            position: 'absolute',
-            bottom: 24,
-            left: 24,
-          }}>
+          <code style={{
+            fontSize: 13,
+            color: 'oklch(0.5 0 0)',
+            fontFamily: 'SF Mono, Consolas, monospace',
+          }}>npx canvai new my-project</code>
+          <div>
             <h3 style={{
               fontSize: 24,
               fontWeight: 700,
@@ -238,42 +243,106 @@ function Work() {
               margin: 0,
               fontFamily: DISPLAY,
               textTransform: 'uppercase',
-            }}>Axis Chair</h3>
+            }}>Start in seconds</h3>
             <p style={{
               fontSize: 12,
               color: 'oklch(0.5 0 0)',
               margin: 0,
               marginTop: 4,
               fontFamily: SANS,
-            }}>Furniture / 2024</p>
+            }}>One command to scaffold</p>
           </div>
         </div>
         <div style={{
           height: 188,
           background: 'oklch(0.92 0.02 75)',
           borderRadius: 4,
-        }} />
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}>
+          <span style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: S.text,
+            fontFamily: SANS,
+          }}>Context images</span>
+          <span style={{
+            fontSize: 12,
+            color: S.textMuted,
+            fontFamily: SANS,
+          }}>Drag inspiration</span>
+        </div>
         <div style={{
           height: 188,
           background: S.bgOrange,
           borderRadius: 4,
-        }} />
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}>
+          <span style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'white',
+            fontFamily: SANS,
+          }}>Annotations</span>
+          <span style={{
+            fontSize: 12,
+            color: 'rgba(255,255,255,0.7)',
+            fontFamily: SANS,
+          }}>Click to change</span>
+        </div>
         <div style={{
           height: 188,
           background: 'oklch(0.85 0.03 180)',
           borderRadius: 4,
-        }} />
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}>
+          <span style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: S.text,
+            fontFamily: SANS,
+          }}>Iterations</span>
+          <span style={{
+            fontSize: 12,
+            color: S.textMuted,
+            fontFamily: SANS,
+          }}>Freeze and branch</span>
+        </div>
         <div style={{
           height: 188,
           background: 'oklch(0.75 0.05 50)',
           borderRadius: 4,
-        }} />
+          padding: 24,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}>
+          <span style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: S.text,
+            fontFamily: SANS,
+          }}>Real code</span>
+          <span style={{
+            fontSize: 12,
+            color: S.textMuted,
+            fontFamily: SANS,
+          }}>React + TypeScript</span>
+        </div>
       </div>
     </section>
   )
 }
 
-function Process() {
+function Workflow() {
   return (
     <section style={{
       padding: '80px 60px',
@@ -294,7 +363,7 @@ function Process() {
             fontFamily: SANS,
             textTransform: 'uppercase',
             letterSpacing: 2,
-          }}>How We Work</h2>
+          }}>Workflow</h2>
           <p style={{
             fontSize: 14,
             color: S.textMuted,
@@ -302,8 +371,8 @@ function Process() {
             margin: 0,
             fontFamily: SANS,
           }}>
-            Our process is methodical yet adaptive.
-            We believe in iteration through making.
+            From prompt to production in minutes.
+            No handoff, no translation, no mockups.
           </p>
         </div>
         <div style={{
@@ -312,9 +381,9 @@ function Process() {
           gap: 40,
         }}>
           {[
-            { step: '01', title: 'Research', desc: 'Deep dive into context, constraints, and possibilities.' },
-            { step: '02', title: 'Prototype', desc: 'Rapid physical and digital modeling to test ideas.' },
-            { step: '03', title: 'Refine', desc: 'Obsessive attention to detail until it feels right.' },
+            { step: '01', title: 'Prompt', desc: 'Describe what you want. Add context images.' },
+            { step: '02', title: 'Generate', desc: 'See multiple directions appear on your canvas.' },
+            { step: '03', title: 'Ship', desc: 'Copy React code directly into your project.' },
           ].map(item => (
             <div key={item.step}>
               <span style={{
@@ -367,9 +436,9 @@ function CTA() {
           textTransform: 'uppercase',
           letterSpacing: -1,
         }}>
-          HAVE A PROJECT
+          READY TO
           <br />
-          IN MIND?
+          DESIGN?
         </h2>
       </div>
       <button style={{
@@ -384,7 +453,7 @@ function CTA() {
         textTransform: 'uppercase',
         letterSpacing: 1,
         cursor: 'default',
-      }}>Start a conversation</button>
+      }}>Get started free</button>
     </section>
   )
 }
@@ -404,7 +473,7 @@ function Footer() {
         color: S.text,
         fontFamily: DISPLAY,
         textTransform: 'uppercase',
-      }}>WERK</span>
+      }}>CANVAI</span>
       <div style={{
         display: 'flex',
         gap: 32,
@@ -414,15 +483,15 @@ function Footer() {
         textTransform: 'uppercase',
         letterSpacing: 1,
       }}>
-        <span>Instagram</span>
-        <span>Behance</span>
-        <span>LinkedIn</span>
+        <span>GitHub</span>
+        <span>Twitter</span>
+        <span>Discord</span>
       </div>
       <span style={{
         fontSize: 11,
         color: S.textMuted,
         fontFamily: SANS,
-      }}>© 2026 Werkstatt</span>
+      }}>© 2026 Canvai</span>
     </footer>
   )
 }
@@ -439,8 +508,8 @@ export function Werkstatt() {
       <Nav />
       <Hero />
       <Stats />
-      <Work />
-      <Process />
+      <Features />
+      <Workflow />
       <CTA />
       <Footer />
     </div>

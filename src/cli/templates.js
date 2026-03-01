@@ -213,3 +213,34 @@ dist
 `
 
 // MCP removed in favor of CLI commands — no .mcp.json needed
+
+/**
+ * Project-level CLAUDE.md template.
+ * Created in src/projects/<name>/CLAUDE.md when a new project is made.
+ * The agent should read this before generating designs.
+ */
+export function projectClaudeMd({ name, description, prompt }) {
+  return `# ${name}
+
+${description || 'A design project on Canvai.'}
+
+## Project Brief
+
+${prompt ? `**Initial prompt:** ${prompt}\n\n` : ''}**Purpose:** [What is this project for?]
+
+**Target Audience:** [Who will use this?]
+
+**Tone:** [Minimal, playful, technical, warm, etc.]
+
+**Key Messages:**
+- [Main value proposition]
+- [Secondary message]
+
+## Copy Guidelines
+
+When generating designs for this project:
+- [Guidelines for headlines]
+- [Guidelines for body copy]
+- [What NOT to include]
+`
+}
