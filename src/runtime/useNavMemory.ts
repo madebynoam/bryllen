@@ -44,12 +44,22 @@ function resolveNav(project: string, iterations: { name: string; pages: { name: 
 /**
  * Remembers iteration + page selection per project.
  * On fresh load: latest iteration, first content page (not Tokens/Components).
+ * URL overrides take precedence if provided.
  */
 export function useNavMemory(
   project: string,
   iterations: { name: string; pages: { name: string }[] }[],
+  urlOverrides?: { iterationIdx?: number; pageIdx?: number },
 ) {
-  const [state, setState] = useState<NavState>(() => resolveNav(project, iterations))
+  const [state, setState] = useState<NavState>(() => {
+    if (urlOverrides?.iterationIdx !== undefined) {
+      return {
+        iteration: urlOverrides.iterationIdx,
+        page: urlOverrides.pageIdx ?? 0,
+      }
+    }
+    return resolveNav(project, iterations)
+  })
   const prevProject = useRef(project)
 
   // Reset nav state when the active project changes

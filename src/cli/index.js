@@ -155,6 +155,21 @@ async function screenshotCanvas() {
     params.set('frame', args[frameIdx + 1])
   }
 
+  const projectIdx = args.indexOf('--project')
+  if (projectIdx !== -1 && args[projectIdx + 1]) {
+    params.set('project', args[projectIdx + 1])
+  }
+
+  const iterIdx = args.indexOf('--iteration')
+  if (iterIdx !== -1 && args[iterIdx + 1]) {
+    params.set('iteration', args[iterIdx + 1])
+  }
+
+  const pageIdx = args.indexOf('--page')
+  if (pageIdx !== -1 && args[pageIdx + 1]) {
+    params.set('page', args[pageIdx + 1])
+  }
+
   const delayIdx = args.indexOf('--delay')
   if (delayIdx !== -1 && args[delayIdx + 1]) {
     params.set('delay', args[delayIdx + 1])
@@ -168,7 +183,7 @@ async function screenshotCanvas() {
       if (result.install) {
         console.log(JSON.stringify({ error: 'Playwright not installed', install: result.install }))
       } else {
-        console.error(JSON.stringify({ error: result.error }))
+        console.error(JSON.stringify({ error: result.error, available: result.available }))
         process.exit(1)
       }
       return
@@ -691,7 +706,7 @@ switch (command) {
     console.log('  canvai progress <id> <msg>  Update progress shown on canvas')
     console.log('  canvai pending              List pending annotations')
     console.log('  canvai list                 List all annotations')
-    console.log('  canvai screenshot [--frame <id>] [--delay <ms>]')
+    console.log('  canvai screenshot [--project <name>] [--iteration <v>] [--page <name>] [--frame <id>] [--delay <ms>]')
     console.log('  canvai context [--project <name>] [--iteration <v>]')
     console.log('  canvai iterate [--project <name>]  Create new iteration (freeze + copy)')
     console.log('')

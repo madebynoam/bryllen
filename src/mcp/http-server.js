@@ -878,14 +878,30 @@ const httpServer = createServer(async (req, res) => {
       }
 
       const frameId = url.searchParams.get('frame')
+      const projectName = url.searchParams.get('project')
+      const iterationName = url.searchParams.get('iteration')
+      const pageName = url.searchParams.get('page')
       const delay = Number(url.searchParams.get('delay')) || 500
 
       try {
-        // Wait for HMR to settle (Vite pushes updates via WebSocket — no reload needed)
+        // Build URL with routing params
+        let targetUrl = 'http://localhost:5173'
+        if (projectName) {
+          targetUrl += '/' + encodeURIComponent(projectName)
+          if (iterationName) {
+            targetUrl += '/' + encodeURIComponent(iterationName)
+            if (pageName) {
+              targetUrl += '/' + encodeURIComponent(pageName)
+            }
+          }
+        }
+
+        // Navigate to the target URL
+        await page.goto(targetUrl, { waitUntil: 'load' })
         await new Promise(r => setTimeout(r, delay))
         await page.waitForSelector('[data-frame-id]', { timeout: 10000 })
 
-        // Ensure screenshots directory exists (STORE_DIR may be a file in the framework repo)
+        // Ensure screenshots directory exists
         const storeIsDir = existsSync(STORE_DIR) && statSync(STORE_DIR).isDirectory()
         const screenshotDir = storeIsDir
           ? join(STORE_DIR, 'screenshots')
@@ -903,7 +919,9 @@ const httpServer = createServer(async (req, res) => {
 
           const frameContent = await page.$(`[data-frame-id="${frameId}"] [data-frame-content]`)
           if (!frameContent) {
-            sendJson(res, 404, { error: `Frame "${frameId}" not found` })
+            // List available frames for debugging
+            const available = await page.evaluate(() => window.__canvai?.getFrameIds?.() ?? [])
+            sendJson(res, 404, { error: `Frame "${frameId}" not found`, available })
             return
           }
           await frameContent.screenshot({ path: filepath })
@@ -917,7 +935,8 @@ const httpServer = createServer(async (req, res) => {
             sendJson(res, 500, { error: 'Canvas content element not found' })
             return
           }
-          await canvasContent.screenshot({ path: filepath })
+          // Use page screenshot since canvas content may have visibility issues
+          await page.screenshot({ path: filepath })
         }
 
         const relPath = screenshotDir.replace(process.cwd() + '/', '') + '/' + filename

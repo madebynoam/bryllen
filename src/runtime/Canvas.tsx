@@ -372,9 +372,11 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
     commitState(newPan, fitZoom)
   }
 
-  // Expose canvas API for Playwright visual review
+  // Expose canvas API for Playwright visual review (merge with existing API from CanvaiShell)
   useEffect(() => {
-    (window as any).__canvai = {
+    const existing = (window as any).__canvai || {}
+    ;(window as any).__canvai = {
+      ...existing,
       fitToView: () => doFitToView(),
       getFrameBounds: (frameId: string) => {
         const el = document.querySelector(`[data-frame-id="${frameId}"]`)
@@ -382,7 +384,7 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
       },
       getCanvasElement: () => document.querySelector('[data-canvas-content]'),
     }
-    return () => { delete (window as any).__canvai }
+    // Don't delete on cleanup - CanvaiShell owns the object
   }, [])
 
   // Keyboard shortcuts

@@ -36,6 +36,42 @@ function loadProjectIndex(max: number): number {
   return 0
 }
 
+// URL routing: /:project/:iteration/:page
+function parseUrl(manifests: ProjectManifest[]): { projectIdx: number; iterationIdx: number; pageIdx: number } | null {
+  const path = window.location.pathname
+  if (path === '/' || path === '') return null
+
+  const parts = path.split('/').filter(Boolean)
+  if (parts.length === 0) return null
+
+  const projectName = decodeURIComponent(parts[0])
+  const projectIdx = manifests.findIndex(m => m.project === projectName)
+  if (projectIdx < 0) return null
+
+  const project = manifests[projectIdx]
+  let iterationIdx = (project.iterations?.length ?? 1) - 1 // default to latest
+  let pageIdx = 0
+
+  if (parts[1]) {
+    const iterName = decodeURIComponent(parts[1])
+    const idx = project.iterations?.findIndex(i => i.name.toLowerCase() === iterName.toLowerCase()) ?? -1
+    if (idx >= 0) iterationIdx = idx
+  }
+
+  if (parts[2]) {
+    const pageName = decodeURIComponent(parts[2])
+    const iteration = project.iterations?.[iterationIdx]
+    const idx = iteration?.pages?.findIndex(p => p.name.toLowerCase() === pageName.toLowerCase()) ?? -1
+    if (idx >= 0) pageIdx = idx
+  }
+
+  return { projectIdx, iterationIdx, pageIdx }
+}
+
+function buildUrl(project: string, iteration: string, page: string): string {
+  return `/${encodeURIComponent(project)}/${encodeURIComponent(iteration)}/${encodeURIComponent(page)}`
+}
+
 /* ── Toast with spring enter / fade exit ── */
 
 const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
@@ -166,7 +202,12 @@ const ContextImageContent = memo(function ContextImageContent({
 })
 
 export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:4748' }: CanvaiShellProps) {
-  const [activeProjectIndex, setActiveProjectIndex] = useState(() => loadProjectIndex(manifests.length))
+  // URL routing takes precedence, then localStorage fallback
+  const urlState = parseUrl(manifests)
+  const [activeProjectIndex, setActiveProjectIndex] = useState(() => urlState?.projectIdx ?? loadProjectIndex(manifests.length))
+  const [urlIterationIdx] = useState(() => urlState?.iterationIdx)
+  const [urlPageIdx] = useState(() => urlState?.pageIdx)
+
   // Persist active project selection
   useEffect(() => {
     try { localStorage.setItem(PROJECT_KEY, String(activeProjectIndex)) } catch {}
@@ -212,11 +253,29 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   const { iterationIndex: activeIterationIndex, pageIndex: activePageIndex, setIteration: setActiveIterationIndex, setPage: setActivePageIndex } = useNavMemory(
     activeProject?.project ?? '',
     activeProject?.iterations ?? [],
+    { iterationIdx: urlIterationIdx, pageIdx: urlPageIdx },
   )
 
   const activeIteration = activeProject?.iterations?.[activeIterationIndex]
   const iterClass = activeIteration ? `iter-${activeIteration.name.toLowerCase()}` : ''
   const iterationName = activeIteration?.name ?? 'v1'
+
+  // Sync URL when navigation changes
+  const augmentedPagesForUrl = [
+    ...(activeIteration?.pages ?? []),
+    ...(import.meta.env.DEV && !activeIteration?.pages?.some(p => p.name === 'Context')
+      ? [{ name: 'Context', frames: [] }]
+      : []),
+  ]
+  const activePageForUrl = augmentedPagesForUrl[activePageIndex]
+  useEffect(() => {
+    if (activeProject?.project && activeIteration?.name && activePageForUrl?.name) {
+      const newUrl = buildUrl(activeProject.project, activeIteration.name, activePageForUrl.name)
+      if (window.location.pathname !== newUrl) {
+        window.history.replaceState(null, '', newUrl)
+      }
+    }
+  }, [activeProject?.project, activeIteration?.name, activePageForUrl?.name])
 
   // Build augmented pages array with Context page (DEV only)
   const augmentedPages = [
