@@ -55,6 +55,8 @@ import { Cipher } from './v7/pages/cipher'
 import { Narrative } from './v7/pages/narrative'
 import { Statement } from './v7/pages/statement'
 import { Vision } from './v7/pages/vision'
+import { FyllaLight } from './v7/pages/fylla-light'
+import { FyllaDark } from './v7/pages/fylla-dark'
 import type { ProjectManifest } from '../../runtime/types'
 
 const manifest: ProjectManifest = {
@@ -442,6 +444,14 @@ const manifest: ProjectManifest = {
             { id: 'v7-narrative', title: 'Narrative — Grid Editorial, Blue Verticals', component: Narrative, width: 1440, height: 2400 },
             { id: 'v7-statement', title: 'Statement — Minimal Typography, Warm', component: Statement, width: 1440, height: 2400 },
             { id: 'v7-vision', title: 'Vision — Real Imagery, Bright Future', component: Vision, width: 1440, height: 2400 },
+          ],
+        },
+        {
+          name: 'FYLLA Variations',
+          grid: { columns: 2, columnWidth: 1440, rowHeight: 2400, gap: 40 },
+          frames: [
+            { id: 'v7-fylla-light', title: 'Fylla Light — Cream Serif Editorial', component: FyllaLight, width: 1440, height: 2400 },
+            { id: 'v7-fylla-dark', title: 'Fylla Dark — Charcoal Serif Editorial', component: FyllaDark, width: 1440, height: 2400 },
           ],
         },
         {
