@@ -216,6 +216,7 @@ function resolveAnnotation(id) {
   const annotation = annotations.get(id)
   if (annotation) {
     annotation.status = 'resolved'
+    delete annotation.progress // Clear progress on resolve
     persistAnnotations()
     // Notify all SSE clients
     for (const client of sseClients) {
@@ -225,6 +226,19 @@ function resolveAnnotation(id) {
     autoCommit(annotation)
   }
   return annotation
+}
+
+function updateProgress(id, message) {
+  const annotation = annotations.get(id)
+  if (annotation && annotation.status === 'pending') {
+    annotation.progress = message
+    // Notify all SSE clients
+    for (const client of sseClients) {
+      client.write(`data: ${JSON.stringify({ type: 'progress', id, message })}\n\n`)
+    }
+    return annotation
+  }
+  return null
 }
 
 function deleteAnnotation(id) {
@@ -413,6 +427,27 @@ const httpServer = createServer(async (req, res) => {
       } else {
         sendJson(res, 404, { error: 'Annotation not found' })
       }
+      return
+    }
+
+    // POST /annotations/:id/progress — update progress message
+    const progressMatch = url.pathname.match(/^\/annotations\/(.+)\/progress$/)
+    if (req.method === 'POST' && progressMatch) {
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', () => {
+        try {
+          const { message } = JSON.parse(body)
+          const annotation = updateProgress(progressMatch[1], message)
+          if (annotation) {
+            sendJson(res, 200, { id: annotation.id, progress: message })
+          } else {
+            sendJson(res, 404, { error: 'Annotation not found or not pending' })
+          }
+        } catch (err) {
+          sendJson(res, 400, { error: 'Invalid JSON' })
+        }
+      })
       return
     }
 

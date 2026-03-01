@@ -49,6 +49,16 @@ async function httpPost(path) {
   return res.json()
 }
 
+async function httpPostJson(path, body) {
+  const port = getHttpPort()
+  const res = await fetch(`http://localhost:${port}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return res.json()
+}
+
 // ─── Annotation CLI commands ────────────────────────────────────────────────
 
 async function watchAnnotations() {
@@ -89,6 +99,27 @@ async function resolveAnnotation() {
       process.exit(1)
     }
     console.log(JSON.stringify({ resolved: true, id, comment: result.comment }))
+  } catch (err) {
+    console.error(JSON.stringify({ error: err.message }))
+    process.exit(1)
+  }
+}
+
+async function progressAnnotation() {
+  const id = process.argv[3]
+  const message = process.argv.slice(4).join(' ')
+  if (!id || !message) {
+    console.error('Usage: canvai progress <id> <message>')
+    process.exit(1)
+  }
+
+  try {
+    const result = await httpPostJson(`/annotations/${id}/progress`, { message })
+    if (result.error) {
+      console.error(JSON.stringify({ error: result.error }))
+      process.exit(1)
+    }
+    console.log(JSON.stringify({ id, progress: message }))
   } catch (err) {
     console.error(JSON.stringify({ error: err.message }))
     process.exit(1)
@@ -460,6 +491,9 @@ switch (command) {
   case 'resolve':
     resolveAnnotation()
     break
+  case 'progress':
+    progressAnnotation()
+    break
   case 'pending':
     pendingAnnotations()
     break
@@ -484,6 +518,7 @@ switch (command) {
     console.log('Annotation commands (for Claude Code agent):')
     console.log('  canvai watch [--timeout N]  Wait for annotation (default 15s)')
     console.log('  canvai resolve <id>         Mark annotation as resolved')
+    console.log('  canvai progress <id> <msg>  Update progress shown on canvas')
     console.log('  canvai pending              List pending annotations')
     console.log('  canvai list                 List all annotations')
     console.log('  canvai screenshot [--frame <id>] [--delay <ms>]')

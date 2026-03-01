@@ -42,12 +42,15 @@ Start the Canvai dev server and enter watch mode.
 6. **Enter watch loop:** Run `npx canvai watch` in a loop. Each call waits up to 15 seconds for the designer to click "Apply" on an annotation. Three outcomes:
 
    **Regular annotation arrives** (JSON with annotation data) — process it:
+   - Run `npx canvai progress <id> "Reading file..."` to show status on canvas
    - **Fast file lookup:** Parse `frameId` (e.g. `"v9-shell"`) to get the iteration (`v9`) and component hint. Grep for `componentName` in that iteration's folder. The annotation metadata is a direct map to the file — never use an Explore agent or broad codebase search.
    - Read the `comment`, `componentName`, `selector`, and `computedStyles`
    - **Follow the guard protocol** (see CLAUDE.md "Before any edit")
-   - Map the annotation to the relevant file in `v<N>/components/` or `v<N>/pages/`
+   - Map to file in `v<N>/components/` or `v<N>/pages/`
+   - Run `npx canvai progress <id> "Applying changes..."`
    - **Token routing:** Route visual value changes through `tokens.css`
    - Apply the requested changes
+   - Run `npx canvai progress <id> "Taking screenshot..."`
    - **Visual review:** Run `npx canvai screenshot --frame <frameId>`
      - Read the returned screenshot file to see the result
      - Check for: broken contrast, overflow/clipping, misalignment, wrong colors, missing styles

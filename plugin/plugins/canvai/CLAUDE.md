@@ -167,6 +167,9 @@ npx canvai watch [--timeout N]
 # Mark annotation as resolved (auto-commits)
 npx canvai resolve <id>
 
+# Update progress shown on canvas (designer sees this)
+npx canvai progress <id> "Reading file..."
+
 # List pending annotations
 npx canvai pending
 
@@ -179,6 +182,11 @@ npx canvai screenshot [--frame <id>] [--delay <ms>]
 # Get context image paths
 npx canvai context --project <name> --iteration <v>
 ```
+
+**Progress updates:** Call `progress` at key points so the designer sees what's happening:
+- `"Reading file..."` — after identifying the target file
+- `"Applying changes..."` — before editing
+- `"Taking screenshot..."` — before visual review
 
 ## Skills
 

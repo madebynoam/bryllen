@@ -37,38 +37,51 @@ interface AnnotationOverlayProps {
 }
 
 /* ── Marker dot ── */
-function MarkerDot({ id, comment, rect, onClick }: {
+function MarkerDot({ id, comment, rect, onClick, progress }: {
   id: number
   comment: string
   rect: DOMRect
   onClick: () => void
+  progress?: string
 }) {
   return (
-    <div
-      title={comment}
-      onClick={onClick}
-      style={{
-        position: 'fixed',
-        left: rect.left - S.sm,
-        top: rect.top - S.sm,
-        width: S.lg,
-        height: S.lg,
-        borderRadius: '50%',
-        background: F.marker,
-        color: 'oklch(1 0 0)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: T.label,
-        fontWeight: 700,
-        fontFamily: FONT,
-        zIndex: 99997,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.15), 0 0 0 0.5px rgba(0,0,0,0.06)',
-        cursor: 'default',
-        userSelect: 'none',
-      }}
-    >
-      {id}
+    <div style={{ position: 'fixed', left: rect.left - S.sm, top: rect.top - S.sm, zIndex: 99997, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div
+        title={comment}
+        onClick={onClick}
+        style={{
+          width: S.lg,
+          height: S.lg,
+          borderRadius: '50%',
+          background: F.marker,
+          color: 'oklch(1 0 0)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: T.label,
+          fontWeight: 700,
+          fontFamily: FONT,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.15), 0 0 0 0.5px rgba(0,0,0,0.06)',
+          cursor: 'default',
+          userSelect: 'none',
+        }}
+      >
+        {id}
+      </div>
+      {progress && (
+        <div style={{
+          background: 'oklch(0.15 0 0 / 0.9)',
+          color: 'oklch(0.9 0 0)',
+          fontSize: 11,
+          fontFamily: FONT,
+          padding: '4px 8px',
+          borderRadius: 6,
+          whiteSpace: 'nowrap',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        }}>
+          {progress}
+        </div>
+      )}
     </div>
   )
 }
@@ -173,6 +186,8 @@ interface AnnotationMarker {
   comment: string
   /** Canvas-space coords for notes not tied to a frame element */
   canvasPoint?: { x: number; y: number }
+  /** Progress message from agent (shown while processing) */
+  progress?: string
 }
 
 export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, project = '' }: AnnotationOverlayProps) {
@@ -228,7 +243,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       .catch(() => {})
   }, [endpoint])
 
-  // Subscribe to SSE for resolved annotations — remove markers when agent resolves them
+  // Subscribe to SSE for resolved annotations and progress updates
   useEffect(() => {
     const source = new EventSource(`${endpoint}/annotations/events`)
     source.onmessage = (e) => {
@@ -236,6 +251,10 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
         const data = JSON.parse(e.data)
         if ((data.type === 'resolved' || data.type === 'deleted') && data.id) {
           setMarkers(prev => prev.filter(m => m.serverId !== data.id))
+        } else if (data.type === 'progress' && data.id && data.message) {
+          setMarkers(prev => prev.map(m =>
+            m.serverId === data.id ? { ...m, progress: data.message } : m
+          ))
         }
       } catch { /* ignore parse errors */ }
     }
@@ -983,6 +1002,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             id={marker.id}
             comment={marker.comment}
             rect={rect}
+            progress={marker.progress}
             onClick={() => {
               // Canvas-level note — no frame to look up
               if (marker.canvasPoint) {
