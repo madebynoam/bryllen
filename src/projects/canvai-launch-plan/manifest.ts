@@ -12,6 +12,28 @@ import { SlideDocs } from './v1/pages/slide-docs'
 import { SlidePolish } from './v1/pages/slide-polish'
 import { MasterBoard } from './v1/pages/master-board'
 
+// V3 - Minimal with Full Content
+import { V3Vision } from './v3/pages/vision'
+import { V3Jtbd } from './v3/pages/jtbd'
+import { V3Landscape } from './v3/pages/landscape'
+import { V3ShipCut } from './v3/pages/ship-cut'
+import { V3Timeline } from './v3/pages/timeline'
+import { V3Docs } from './v3/pages/docs'
+import { V3Polish } from './v3/pages/polish'
+import { V3Naming } from './v3/pages/naming'
+import { V3Master } from './v3/pages/master'
+
+// V3 - Dark Editorial with Images
+import { V3DarkVision } from './v3/pages/dark-vision'
+import { V3DarkJtbd } from './v3/pages/dark-jtbd'
+import { V3DarkLandscape } from './v3/pages/dark-landscape'
+import { V3DarkShipCut } from './v3/pages/dark-ship-cut'
+import { V3DarkTimeline } from './v3/pages/dark-timeline'
+import { V3DarkDocs } from './v3/pages/dark-docs'
+import { V3DarkPolish } from './v3/pages/dark-polish'
+import { V3DarkNaming } from './v3/pages/dark-naming'
+import { V3DarkMaster } from './v3/pages/dark-master'
+
 // V2 - Light Style
 import { LightSummary } from './v2/pages/light-summary'
 import { LightJtbd } from './v2/pages/light-jtbd'
@@ -69,6 +91,7 @@ const manifest: ProjectManifest = {
     {
       name: 'V2',
       description: 'Light & Dark with Imagery',
+      frozen: true,
       pages: [
         {
           name: 'Light Style',
@@ -107,6 +130,42 @@ const manifest: ProjectManifest = {
             { id: 'minimal-ship', title: 'Ship vs Cut', component: MinimalShip, width: 800, height: 600 },
             { id: 'minimal-polish', title: 'Polish', component: MinimalPolish, width: 800, height: 600 },
             { id: 'minimal-master', title: 'Master', component: MinimalMaster, width: 800, height: 600 },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'V3',
+      description: 'Minimal Style with Full Launch Content',
+      pages: [
+        {
+          name: 'All Slides',
+          grid: { columns: 4, columnWidth: 960, rowHeight: 540, gap: 32 },
+          frames: [
+            { id: 'v3-vision', title: '01 — Vision', component: V3Vision, width: 960, height: 540 },
+            { id: 'v3-jtbd', title: '02 — Jobs to Be Done', component: V3Jtbd, width: 960, height: 540 },
+            { id: 'v3-landscape', title: '03 — The Landscape', component: V3Landscape, width: 960, height: 540 },
+            { id: 'v3-ship-cut', title: '04 — Ship vs Cut', component: V3ShipCut, width: 960, height: 540 },
+            { id: 'v3-timeline', title: '05 — Timeline', component: V3Timeline, width: 960, height: 540 },
+            { id: 'v3-docs', title: '06 — Docs Strategy', component: V3Docs, width: 960, height: 540 },
+            { id: 'v3-polish', title: '07 — Polish', component: V3Polish, width: 960, height: 540 },
+            { id: 'v3-naming', title: '08 — Naming', component: V3Naming, width: 960, height: 540 },
+            { id: 'v3-master', title: '09 — Master Board', component: V3Master, width: 960, height: 540 },
+          ],
+        },
+        {
+          name: 'Dark Editorial',
+          grid: { columns: 4, columnWidth: 960, rowHeight: 540, gap: 32 },
+          frames: [
+            { id: 'v3-dark-vision', title: '01 — Vision', component: V3DarkVision, width: 960, height: 540 },
+            { id: 'v3-dark-jtbd', title: '02 — Jobs to Be Done', component: V3DarkJtbd, width: 960, height: 540 },
+            { id: 'v3-dark-landscape', title: '03 — The Landscape', component: V3DarkLandscape, width: 960, height: 540 },
+            { id: 'v3-dark-ship-cut', title: '04 — Ship vs Cut', component: V3DarkShipCut, width: 960, height: 540 },
+            { id: 'v3-dark-timeline', title: '05 — Timeline', component: V3DarkTimeline, width: 960, height: 540 },
+            { id: 'v3-dark-docs', title: '06 — Docs Strategy', component: V3DarkDocs, width: 960, height: 540 },
+            { id: 'v3-dark-polish', title: '07 — Polish', component: V3DarkPolish, width: 960, height: 540 },
+            { id: 'v3-dark-naming', title: '08 — Naming', component: V3DarkNaming, width: 960, height: 540 },
+            { id: 'v3-dark-master', title: '09 — Master Board', component: V3DarkMaster, width: 960, height: 540 },
           ],
         },
       ],
