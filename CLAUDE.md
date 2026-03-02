@@ -1,6 +1,16 @@
 # Canvai — Repo Development
 
-Canvai is a canvas for Claude Code design — an infinite, zoomable surface where every generation lives as a frame. Two pieces: **npm package** (runtime, Vite plugin, CLI) and **Claude Code plugin** (skills, MCP, agent instructions in `plugin/plugins/canvai/CLAUDE.md`).
+Canvai is an infinite canvas for Claude Code. Designers describe what they want, Claude generates multiple real React components, they compare side-by-side and ship the best one.
+
+**Jobs to Be Done:**
+1. **Explore** — See multiple directions at once → Canvas shows options
+2. **Iterate** — Describe changes in words → Click → Type → Applied
+3. **Decide** — Grab the file → Cmd+Shift+Click → Finder
+4. **Share** — Get feedback → Share button → Link
+
+The code was never a mockup. Explore → Decide → Ship. No handoff.
+
+Two pieces: **npm package** (runtime, Vite plugin, CLI) and **Claude Code plugin** (skills, MCP, agent instructions in `plugin/plugins/canvai/CLAUDE.md`).
 
 ## Project structure
 

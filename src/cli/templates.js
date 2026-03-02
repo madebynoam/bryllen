@@ -128,6 +128,16 @@ export const claudeMd = `# Project Rules
 
 These rules are enforced by the agent. Do not remove this file.
 
+## What Canvai Is For
+
+Canvai is hired for four jobs:
+1. **Explore** — See multiple directions at once (canvas shows options)
+2. **Iterate** — Describe changes in words (click → type → applied)
+3. **Decide** — Grab the file (Cmd+Shift+Click → Finder)
+4. **Share** — Get feedback (share button → link)
+
+The code was never a mockup. Explore → Decide → Ship. No handoff.
+
 ## Design directions (proliferate first)
 
 Generate **3+ distinct design directions** on a single "All Directions" manifest page — different visual bets, not variations of one idea. Use \\\`DirectionLabel\\\` as the first frame per row in an N+1 column grid (1 label + N states). Let the designer react and converge.

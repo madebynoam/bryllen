@@ -1,18 +1,28 @@
 # Canvai Landing Page
 
-This is the marketing landing page for **Canvai** — a design canvas for Claude Code.
+This is the marketing landing page for **Canvai** — an infinite canvas for Claude Code.
+
+## Jobs to Be Done
+
+Canvai is hired for four jobs:
+1. **Explore** — See multiple directions at once → Canvas shows options
+2. **Iterate** — Describe changes in words → Click → Type → Applied
+3. **Decide** — Grab the file → Cmd+Shift+Click → Finder
+4. **Share** — Get feedback → Share button → Link
+
+The code was never a mockup. Explore → Decide → Ship. No handoff.
 
 ## Product Brief
 
 **What is Canvai?**
-Canvai is an infinite, zoomable canvas where designers work with Claude Code to generate real React components. Unlike traditional design tools that produce static mockups, Canvai outputs production-ready code that renders live on the canvas.
+An infinite, zoomable canvas where designers work with Claude Code to generate real React components. Unlike tools that produce mockups, Canvai outputs production-ready code that renders live.
 
 **Key Features:**
 - Infinite canvas with pan/zoom
-- Multiple design directions generated simultaneously (3-5 per prompt)
-- Context images for visual inspiration (drag reference images onto canvas)
-- Real-time annotations (click anywhere, describe changes, see them applied)
-- Iteration management (freeze versions, branch off new directions)
+- Multiple design directions generated simultaneously
+- Context images for visual inspiration
+- Real-time annotations (click → describe → applied)
+- Iteration management (freeze versions, branch directions)
 - Production-ready React/TypeScript output
 
 **Target Audience:**
@@ -21,23 +31,29 @@ Canvai is an infinite, zoomable canvas where designers work with Claude Code to 
 - Teams using Claude Code for development
 - Product teams exploring UI directions quickly
 
-**Tone:**
+## Messaging
+
+**Primary:**
+- "See every direction at once"
+
+**Supporting:**
+- "Real components, not mockups"
+- "Design with Claude Code"
+- "Explore → Decide → Ship"
+- "The code was never a mockup"
+
+## Tone
+
 - Confident but not arrogant
 - Technical but accessible
 - Minimal, precise language
 - Avoid buzzwords (no "revolutionary", "game-changing", etc.)
 
-**Key Messages:**
-- "See every direction at once"
-- "Real components, not mockups"
-- "Design with Claude Code"
-- "From prompt to production"
-
 ## Copy Guidelines
 
 When generating landing page designs:
-- Headlines should focus on the canvas/visual aspect
-- Emphasize seeing multiple directions simultaneously
-- Highlight that output is real React code
-- Use Canvai-specific terminology (canvas, frames, iterations, context images)
+- Headlines should focus on seeing multiple directions
+- Emphasize the canvas as the differentiator
+- Highlight that output is real React code, not mockups
+- Show the journey: Explore → Decide → Ship
 - Keep body copy short and scannable
