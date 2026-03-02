@@ -1,53 +1,47 @@
 /**
- * Slide 1: What We're Building
- * Dieter Rams — grid, minimal, functional
+ * Slide 1: Vision
+ * Dark editorial style
  */
 
 const C = {
-  bg: '#FAFAFA',
-  surface: '#FFFFFF',
-  border: '#E5E5E5',
-  borderStrong: '#1A1A1A',
-  accent: '#E54D2E',
-  text: '#1A1A1A',
-  textSec: '#666666',
-  textMuted: '#999999',
-}
-
-const G = 8
-
-function Metric({ value, label }: { value: string; label: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: G * 3, border: `1px solid ${C.border}` }}>
-      <div style={{ fontSize: 48, fontWeight: 700, color: C.text, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: G }}>{label}</div>
-    </div>
-  )
+  bg: '#141414',
+  text: '#FAFAFA',
+  textSec: '#A1A1A1',
+  textMuted: '#6B6B6B',
 }
 
 export function SlideSummary() {
   return (
-    <div style={{ width: '100%', height: '100%', backgroundColor: C.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', padding: G * 6, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: G * 2 }}>01 — Vision</div>
+    <div style={{ width: '100%', height: '100%', backgroundColor: C.bg, fontFamily: 'Inter, -apple-system, sans-serif', padding: 64, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 24 }}>
+        01 — Vision
+      </div>
 
-      <h1 style={{ fontSize: 40, fontWeight: 700, color: C.text, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-        See every direction<br />at once
+      <h1 style={{ fontSize: 44, fontWeight: 400, color: C.text, margin: 0, lineHeight: 1.2, maxWidth: 500 }}>
+        See every direction — at once.
       </h1>
 
-      <p style={{ fontSize: 16, color: C.textSec, margin: `${G * 3}px 0`, maxWidth: 400, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 16, color: C.textSec, marginTop: 32, maxWidth: 420, lineHeight: 1.6, fontWeight: 400 }}>
         Design canvas for Claude Code. Generate real React components. Compare directions side-by-side. Ship what works.
       </p>
 
       <div style={{ flex: 1 }} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, backgroundColor: C.border }}>
-        <Metric value="∞" label="Canvas" />
-        <Metric value="N" label="Directions" />
-        <Metric value="1" label="Click to Share" />
-        <Metric value="0" label="Mockups" />
+      <div style={{ display: 'flex', gap: 64 }}>
+        {[
+          { value: '∞', label: 'Canvas' },
+          { value: 'N', label: 'Directions' },
+          { value: '1', label: 'Click to share' },
+          { value: '0', label: 'Mockups' },
+        ].map((m, i) => (
+          <div key={i}>
+            <div style={{ fontSize: 36, fontWeight: 300, color: C.text, fontVariantNumeric: 'tabular-nums' }}>{m.value}</div>
+            <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 8 }}>{m.label}</div>
+          </div>
+        ))}
       </div>
 
-      <div style={{ marginTop: G * 4, fontSize: 13, color: C.textSec }}>
+      <div style={{ marginTop: 48, fontSize: 14, color: C.textSec }}>
         Not mockups. Not chat. A canvas where designs become code.
       </div>
     </div>

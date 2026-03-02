@@ -1,60 +1,47 @@
 /**
- * Slide 2: The Landscape
- * Dieter Rams — grid, minimal, functional
+ * Slide 3: The Landscape
+ * Dark editorial style
  */
 
 const C = {
-  bg: '#FAFAFA',
-  surface: '#FFFFFF',
-  border: '#E5E5E5',
-  borderStrong: '#1A1A1A',
-  accent: '#E54D2E',
-  text: '#1A1A1A',
-  textSec: '#666666',
-  textMuted: '#999999',
-}
-
-const G = 8
-
-function ProductRow({ name, what, approach }: { name: string; what: string; approach: string }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: G * 2, padding: `${G * 2}px 0`, borderBottom: `1px solid ${C.border}`, fontSize: 13, alignItems: 'baseline' }}>
-      <span style={{ fontWeight: 600, color: C.text }}>{name}</span>
-      <span style={{ color: C.textSec }}>{what}</span>
-      <span style={{ color: C.textMuted }}>{approach}</span>
-    </div>
-  )
+  bg: '#141414',
+  text: '#FAFAFA',
+  textSec: '#A1A1A1',
+  textMuted: '#6B6B6B',
 }
 
 export function SlideCompetitors() {
+  const products = [
+    { name: 'Cursor', what: 'AI code editor', approach: 'IDE-first, one generation' },
+    { name: 'v0', what: 'Chat to UI', approach: 'Conversation, frontend' },
+    { name: 'Lovable', what: 'Full-stack builder', approach: 'Chat-based, end-to-end' },
+    { name: 'Figma AI', what: 'Design tool', approach: 'Mockups, collaboration' },
+  ]
+
   return (
-    <div style={{ width: '100%', height: '100%', backgroundColor: C.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', padding: G * 6, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: G * 2 }}>02 — The Landscape</div>
-
-      <h1 style={{ fontSize: 32, fontWeight: 700, color: C.text, margin: 0, marginBottom: G * 4 }}>
-        What Exists Today
-      </h1>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: G * 2, fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', paddingBottom: G, borderBottom: `1px solid ${C.borderStrong}` }}>
-        <span>Product</span>
-        <span>What It Does</span>
-        <span>Approach</span>
+    <div style={{ width: '100%', height: '100%', backgroundColor: C.bg, fontFamily: 'Inter, -apple-system, sans-serif', padding: 64, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 24 }}>
+        03 — The Landscape
       </div>
 
-      <ProductRow name="Cursor" what="AI code editor, Composer model" approach="IDE-first, one generation" />
-      <ProductRow name="v0" what="Chat to UI, Vercel deploy" approach="Conversation, frontend" />
-      <ProductRow name="Lovable" what="Full-stack app builder" approach="Chat-based, end-to-end" />
-      <ProductRow name="Figma AI" what="Design tool with AI features" approach="Mockups, collaboration" />
+      <h1 style={{ fontSize: 44, fontWeight: 400, color: C.text, margin: 0, lineHeight: 1.2 }}>
+        What exists today.
+      </h1>
 
-      <div style={{ flex: 1 }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24 }}>
+        {products.map((p, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 24 }}>
+            <div style={{ fontSize: 15, color: C.text, fontWeight: 500, width: 100 }}>{p.name}</div>
+            <div style={{ fontSize: 15, color: C.textSec }}>{p.what}</div>
+            <div style={{ fontSize: 13, color: C.textMuted, marginLeft: 'auto' }}>{p.approach}</div>
+          </div>
+        ))}
+      </div>
 
-      <div style={{ padding: G * 3, border: `1px solid ${C.borderStrong}`, backgroundColor: C.surface }}>
-        <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: G }}>What We're Building</div>
-        <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>
+      <div style={{ borderTop: `1px solid ${C.textMuted}40`, paddingTop: 24 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>What We're Building</div>
+        <div style={{ fontSize: 20, color: C.text, fontWeight: 400 }}>
           Infinite canvas. Multiple directions. Real components.
-        </div>
-        <div style={{ fontSize: 13, color: C.textSec, marginTop: G }}>
-          See 5 designs side-by-side. Click to annotate. Ship real React.
         </div>
       </div>
     </div>
