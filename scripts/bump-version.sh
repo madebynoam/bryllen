@@ -65,7 +65,16 @@ node -e "
   data.plugins[0].version = '$VERSION';
   fs.writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
 "
-echo "  4/4 .claude-plugin/marketplace.json"
+echo "  4/5 .claude-plugin/marketplace.json"
+
+# 5. src/runtime/version.ts → VERSION constant
+node -e "
+  const fs = require('fs');
+  const path = '$ROOT/src/runtime/version.ts';
+  const content = \"// This version is updated by scripts/bump-version.sh\nexport const VERSION = '$VERSION'\n\";
+  fs.writeFileSync(path, content);
+"
+echo "  5/5 src/runtime/version.ts"
 
 echo ""
-echo "All 5 version fields bumped to $VERSION"
+echo "All 6 version fields bumped to $VERSION"

@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { ProjectPicker } from './ProjectPicker'
 import { PickerDropdown } from './PickerDropdown'
 import { AnnotationPanelWidget } from './AnnotationPanel'
 import { ShareButton } from './ShareButton'
-import { PanelLeft, Plus } from 'lucide-react'
+import { PanelLeft, Plus, ArrowUp } from 'lucide-react'
 import { MenuRow } from './Menu'
-import { N, S, R, T, ICON, FONT, DIM } from './tokens'
+import { N, A, D, S, R, T, ICON, FONT, DIM } from './tokens'
 import type { IterationManifest } from './types'
 
 interface TopBarProps {
@@ -22,6 +23,8 @@ interface TopBarProps {
   onNewProject?: () => void
   shareUrl?: string
   projectName: string
+  updateAvailable?: boolean
+  onUpdateClick?: () => void
 }
 
 function SidebarIcon() {
@@ -44,7 +47,10 @@ export function TopBar({
   onNewProject,
   shareUrl,
   projectName,
+  updateAvailable,
+  onUpdateClick,
 }: TopBarProps) {
+  const [updateHovered, setUpdateHovered] = useState(false)
   // Reverse so newest iteration is on top
   const reversedIterations = [...iterations].reverse()
   const reversedActiveIndex = iterations.length - 1 - activeIterationIndex
@@ -146,6 +152,33 @@ export function TopBar({
         {/* Annotation panel */}
         {import.meta.env.DEV && (
           <AnnotationPanelWidget endpoint={annotationEndpoint} />
+        )}
+
+        {/* Update available button */}
+        {updateAvailable && onUpdateClick && (
+          <button
+            onClick={onUpdateClick}
+            onMouseEnter={() => setUpdateHovered(true)}
+            onMouseLeave={() => setUpdateHovered(false)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: S.xs,
+              padding: `${S.xs}px ${S.sm}px`,
+              border: 'none',
+              borderRadius: R.ui,
+              background: updateHovered ? 'oklch(0.50 0.14 250)' : 'oklch(0.55 0.14 250)',
+              color: D.text,
+              fontSize: T.ui,
+              fontWeight: 500,
+              fontFamily: FONT,
+              cursor: 'default',
+              transition: 'background 0.1s ease-out',
+            }}
+          >
+            <ArrowUp size={ICON.sm} strokeWidth={2} />
+            Update available
+          </button>
         )}
 
         {/* Share button — DEV only (needs annotation server) */}

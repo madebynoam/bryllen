@@ -16,6 +16,9 @@ import { ZoomControl } from './ZoomControl'
 import { CanvasColorPicker, DEFAULT_CANVAS_COLOR } from './CanvasColorPicker'
 import { loadCanvasBg, saveCanvasBg } from './Canvas'
 import { ActionButton } from './Menu'
+import { UpdateDialog } from './UpdateDialog'
+import { checkForUpdate, getDismissedVersion } from './versionCheck'
+import { VERSION } from './version'
 import { N, D, E, S, T, R, FONT, DIM } from './tokens'
 import type { ProjectManifest, CanvasImageFrame } from './types'
 
@@ -229,8 +232,24 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   const [showTour, setShowTour] = useState(() => !isTourCompleted())
   // Pending prompt request from agent (when /canvai-new is called without a prompt)
   const [promptRequest, setPromptRequest] = useState<{ id: string; projectName: string } | null>(null)
+  // Update checker state
+  const [updateInfo, setUpdateInfo] = useState<{ available: boolean; latestVersion: string | null }>({ available: false, latestVersion: null })
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false)
 
   const showToast = useCallback((msg: string) => setToast(msg), [])
+
+  // Check for updates on mount
+  useEffect(() => {
+    checkForUpdate(VERSION).then(result => {
+      if (result.updateAvailable && result.latestVersion) {
+        // Don't show if user dismissed this version
+        const dismissed = getDismissedVersion()
+        if (dismissed !== result.latestVersion) {
+          setUpdateInfo({ available: true, latestVersion: result.latestVersion })
+        }
+      }
+    })
+  }, [])
 
   const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
 
@@ -560,6 +579,8 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         onNewProject={() => setProjectDialogOpen(true)}
         shareUrl={activeProject?.shareUrl}
         projectName={activeProject?.project ?? ''}
+        updateAvailable={updateInfo.available}
+        onUpdateClick={() => setUpdateDialogOpen(true)}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -676,6 +697,14 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
           defaultName={promptRequest.projectName}
         />
       )}
+
+      {/* Update dialog */}
+      <UpdateDialog
+        open={updateDialogOpen}
+        onClose={() => setUpdateDialogOpen(false)}
+        currentVersion={VERSION}
+        latestVersion={updateInfo.latestVersion ?? ''}
+      />
 
       {/* First-use onboarding tour */}
       {showTour && manifests.length > 0 && (
