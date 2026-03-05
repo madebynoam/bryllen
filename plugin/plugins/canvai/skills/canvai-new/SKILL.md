@@ -40,11 +40,9 @@ Create a new design project inside Canvai and launch the dev environment.
    ```bash
    npx canvai new
    ```
-   This creates `index.html`, `vite.config.ts`, `src/App.tsx`, `src/main.tsx`, `CLAUDE.md` (project rules), `.claude/settings.json` (frozen guard hook), `.mcp.json` (annotation MCP config), tsconfigs, and installs peer dependencies. Files that already exist are skipped.
+   This creates `index.html`, `vite.config.ts`, `src/App.tsx`, `src/main.tsx`, `CLAUDE.md` (project rules), `.claude/settings.json` (frozen guard hook), tsconfigs, and installs peer dependencies. Files that already exist are skipped.
 
-6. **Activate the annotation MCP.** The annotation MCP is now configured via `.mcp.json`.
-
-7. **Create the project folder structure:**
+6. **Create the project folder structure:**
    ```
    src/projects/<project-name>/
      v1/
@@ -57,22 +55,22 @@ Create a new design project inside Canvai and launch the dev environment.
      CHANGELOG.md
    ```
 
-8. **Initial commit:** Create a git commit with the scaffolded project:
+7. **Initial commit:** Create a git commit with the scaffolded project:
    ```bash
    git add . && git commit -m 'feat: init <project-name> project'
    ```
    This captures the scaffold. A second commit will follow after the design is generated in the 'What happens next' sequence.
 
-9. **Launch the dev server:**
+8. **Launch the dev server:**
    ```bash
    npx canvai design
    ```
    This starts both Vite and the annotation HTTP server in one command.
 
-10. **Confirm and remind:**
-    > "Project `<project-name>` is live at http://localhost:5173. **Restart Claude Code now** to activate the annotation MCP — then describe a component and I'll generate it on the canvas."
+9. **Confirm:** Tell the designer the canvas is ready:
+   > "Project `<project-name>` is live at http://localhost:5173"
 
-    Continue immediately with the **What happens next** sequence below to generate the initial design.
+10. **Continue immediately** with the **What happens next** sequence below to generate the initial design. After generating, **enter watch mode automatically** so the designer can annotate without running any commands.
 
 ## What happens next
 
@@ -106,6 +104,8 @@ After init, the designer describes what they want. The agent follows this exact 
 6. **Log to CHANGELOG.md** — record the design directions and why each is different
 
 7. **The canvas auto-discovers the manifest** and renders all frames — designer sees all directions at once
+
+8. **Enter watch mode** — run `npx canvai watch` to start listening for designer annotations. This is critical — the designer should be able to click and annotate immediately without running any commands.
 
 The full token system, design language, component hierarchy, and guard protocol are defined in CLAUDE.md — those rules apply to every file the agent creates.
 

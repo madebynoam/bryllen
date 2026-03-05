@@ -25,7 +25,7 @@ Update everything in one shot — npm package, migrations, and Claude Code plugi
    ```
    (The `diff --quiet` check skips the commit if migrations made no changes.)
 
-4. **Update the plugin marketplace repo** (git pull updates skills, MCP config, and CLAUDE.md):
+4. **Update the plugin marketplace repo** (git pull updates skills and CLAUDE.md):
    ```bash
    cd ~/.claude/plugins/marketplaces/canvai && git pull origin main 2>/dev/null; cd -
    ```
