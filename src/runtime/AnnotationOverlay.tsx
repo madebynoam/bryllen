@@ -454,7 +454,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       let hoveredFrameId: string | null = null
       let hoveredFrameRect: DOMRect | null = null
 
-      // Check if hovering over another context image
+      // Check if hovering over another frame (image or component)
       if (overlay) {
         overlay.style.pointerEvents = 'none'
         const el = document.elementFromPoint(e.clientX, e.clientY)
@@ -464,7 +464,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
           if (frameEl) {
             const frameId = frameEl.getAttribute('data-frame-id') ?? ''
             const alreadyLocked = dragState.lockedTargets.some(t => t.frameId === frameId)
-            if (frameId !== dragState.fromFrameId && !alreadyLocked && isContextImageFrame(frameId)) {
+            if (frameId !== dragState.fromFrameId && !alreadyLocked) {
               hoveredFrameId = frameId
               hoveredFrameRect = frameEl.getBoundingClientRect()
             }
@@ -619,8 +619,8 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
           const toFrameId = frameEl.getAttribute('data-frame-id') ?? ''
           const alreadyIncluded = toFrameId === dragState.fromFrameId || allTargets.some(t => t.frameId === toFrameId)
 
-          // Add final hover target if it's a valid context image
-          if (!alreadyIncluded && isContextImageFrame(toFrameId)) {
+          // Add final hover target if it's a valid frame
+          if (!alreadyIncluded) {
             const center = getFrameCenter(toFrameId)
             if (center) {
               allTargets.push({ frameId: toFrameId, point: center })
