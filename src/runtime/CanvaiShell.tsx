@@ -224,7 +224,8 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   const [iterDialogOpen, setIterDialogOpen] = useState(false)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [contextImages, setContextImages] = useState<CanvasImageFrame[]>([])
+  // Images stored per-page: { "pageName": CanvasImageFrame[] }
+  const [pageImages, setPageImages] = useState<Record<string, CanvasImageFrame[]>>({})
   const [showTour, setShowTour] = useState(() => !isTourCompleted())
   // Pending prompt request from agent (when /canvai-new is called without a prompt)
   const [promptRequest, setPromptRequest] = useState<{ id: string; projectName: string } | null>(null)
@@ -346,70 +347,85 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
       : []),
   ]
   const activePage = augmentedPages[activePageIndex]
-  const isContextPage = activePage?.name === 'Context'
+  const pageName = activePage?.name ?? ''
+  const isContextPage = pageName === 'Context'
   const layoutedFrames = activePage && !isContextPage ? layoutFrames(activePage) : []
 
   const { frames, updateFrame, handleResize } = useFrames(layoutedFrames, activePage?.grid)
 
-  // Load context images when iteration changes
+  // Get images for current page
+  const currentPageImages = pageImages[pageName] ?? []
+
+  // Load images for current page when page/iteration changes
   useEffect(() => {
-    if (!activeProject?.project) return
-    fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}`)
+    if (!activeProject?.project || !pageName) return
+
+    // Build URL with page param (Context page uses root context folder for backwards compat)
+    const pageParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
+    const url = `${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageParam}`
+
+    fetch(url)
       .then(r => r.json())
       .then(data => {
-        console.log('[canvai] Loaded context data:', data)
         if (data.images && Array.isArray(data.images)) {
           const positions = data.positions || {}
-          setContextImages(data.images.map((img: { filename: string; path: string }, i: number) => {
+          const images = data.images.map((img: { filename: string; path: string }, i: number) => {
             const saved = positions[img.filename]
-            console.log('[canvai] Image', img.filename, 'saved pos:', saved)
+            const pageQueryParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
             return {
               type: 'image' as const,
-              id: `context-${img.filename}`,
+              id: `${pageName}-${img.filename}`,
               title: img.filename,
-              src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&filename=${encodeURIComponent(img.filename)}`,
+              src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageQueryParam}&filename=${encodeURIComponent(img.filename)}`,
               x: saved?.x ?? 50 + (i % 4) * 320,
               y: saved?.y ?? 50 + Math.floor(i / 4) * 320,
               width: saved?.width ?? 300,
               height: saved?.height ?? 300,
             }
-          }))
+          })
+          setPageImages(prev => ({ ...prev, [pageName]: images }))
+        } else {
+          setPageImages(prev => ({ ...prev, [pageName]: [] }))
         }
       })
-      .catch(() => setContextImages([]))
-  }, [activeProject?.project, iterationName, annotationEndpoint])
+      .catch(() => setPageImages(prev => ({ ...prev, [pageName]: [] })))
+  }, [activeProject?.project, iterationName, pageName, isContextPage, annotationEndpoint])
 
-  // Save context image positions (debounced)
+  // Save image positions per-page (debounced)
   const savePositionsRef = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => {
-    if (!activeProject?.project || contextImages.length === 0) return
+    if (!activeProject?.project || !pageName || currentPageImages.length === 0) return
     clearTimeout(savePositionsRef.current)
     savePositionsRef.current = setTimeout(() => {
       const positions: Record<string, { x: number; y: number; width: number; height: number }> = {}
-      for (const img of contextImages) {
+      for (const img of currentPageImages) {
         const filename = img.title
         positions[filename] = { x: img.x, y: img.y, width: img.width, height: img.height }
       }
-      console.log('[canvai] Saving context positions:', positions)
+      // Context page uses root context folder, other pages use subfolders
+      const pageParam = isContextPage ? undefined : pageName
       fetch(`${annotationEndpoint}/context-positions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: activeProject.project, iteration: iterationName, positions }),
-      }).then(r => console.log('[canvai] Save result:', r.ok)).catch(e => console.error('[canvai] Save error:', e))
+        body: JSON.stringify({ project: activeProject.project, iteration: iterationName, page: pageParam, positions }),
+      }).catch(() => {})
     }, 300)
-  }, [contextImages, activeProject?.project, iterationName, annotationEndpoint])
+  }, [currentPageImages, activeProject?.project, iterationName, pageName, isContextPage, annotationEndpoint])
 
-  // Handle image paste — save to server and add to context
+  // Handle image paste — save to server and add to current page
   const handleImagePaste = useCallback(async (dataUrl: string, filename: string) => {
-    if (!activeProject?.project) return
+    if (!activeProject?.project || !pageName) return
 
     try {
+      // Context page uses root context folder, other pages use subfolders
+      const pageParam = isContextPage ? undefined : pageName
       const res = await fetch(`${annotationEndpoint}/context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project: activeProject.project,
           iteration: iterationName,
+          page: pageParam,
           dataUrl,
           filename,
         }),
@@ -418,34 +434,41 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
 
       if (result.path) {
         // Add to local state immediately
+        const pageQueryParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
+        const currentImages = pageImages[pageName] ?? []
         const newImage: CanvasImageFrame = {
           type: 'image',
-          id: `context-${result.filename}`,
+          id: `${pageName}-${result.filename}`,
           title: result.filename,
-          src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&filename=${encodeURIComponent(result.filename)}`,
-          x: 50 + (contextImages.length % 4) * 320,
-          y: 50 + Math.floor(contextImages.length / 4) * 320,
+          src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageQueryParam}&filename=${encodeURIComponent(result.filename)}`,
+          x: 50 + (currentImages.length % 4) * 320,
+          y: 50 + Math.floor(currentImages.length / 4) * 320,
           width: 300,
           height: 300,
         }
-        setContextImages(prev => [...prev, newImage])
-        showToast('Image added to context')
+        setPageImages(prev => ({ ...prev, [pageName]: [...(prev[pageName] ?? []), newImage] }))
+        showToast('Image added')
       }
     } catch {
       showToast('Failed to save image')
     }
-  }, [activeProject?.project, iterationName, annotationEndpoint, contextImages.length, showToast])
+  }, [activeProject?.project, iterationName, pageName, isContextPage, pageImages, annotationEndpoint, showToast])
 
-  // Handle context image deletion
-  const handleDeleteContextImage = useCallback(async (imageId: string, filename: string) => {
-    if (!activeProject?.project) return
+  // Handle image deletion from current page
+  const handleDeletePageImage = useCallback(async (imageId: string, filename: string) => {
+    if (!activeProject?.project || !pageName) return
 
     try {
-      const res = await fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&filename=${encodeURIComponent(filename)}`, {
+      // Context page uses root context folder, other pages use subfolders
+      const pageParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
+      const res = await fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageParam}&filename=${encodeURIComponent(filename)}`, {
         method: 'DELETE',
       })
       if (res.ok) {
-        setContextImages(prev => prev.filter(img => img.id !== imageId))
+        setPageImages(prev => ({
+          ...prev,
+          [pageName]: (prev[pageName] ?? []).filter(img => img.id !== imageId)
+        }))
         showToast('Image deleted')
       } else {
         showToast('Failed to delete image')
@@ -453,7 +476,7 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
     } catch {
       showToast('Failed to delete image')
     }
-  }, [activeProject?.project, iterationName, annotationEndpoint, showToast])
+  }, [activeProject?.project, iterationName, pageName, isContextPage, annotationEndpoint, showToast])
 
   const projectKey = activeProject?.project ?? ''
   const [canvasBg, setCanvasBg] = useState(() => loadCanvasBg(projectKey) ?? DEFAULT_CANVAS_COLOR)
@@ -584,8 +607,8 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
                   {'component' in frame && <frame.component {...(frame.props ?? {})} />}
                 </Frame>
               ))}
-              {/* Render context images on Context page */}
-              {isContextPage && contextImages.map(img => (
+              {/* Render pasted images on current page */}
+              {currentPageImages.map(img => (
                 <Frame
                   key={img.id}
                   id={img.id}
@@ -595,17 +618,21 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
                   width={img.width}
                   height={img.height}
                   onMove={(id, newX, newY) => {
-                    setContextImages(prev => prev.map(ci =>
-                      ci.id === id ? { ...ci, x: newX, y: newY } : ci
-                    ))
+                    setPageImages(prev => ({
+                      ...prev,
+                      [pageName]: (prev[pageName] ?? []).map(ci =>
+                        ci.id === id ? { ...ci, x: newX, y: newY } : ci
+                      )
+                    }))
                   }}
                 >
                   <ContextImageContent
                     src={img.src}
                     title={img.title}
                     onDelete={() => {
-                      const filename = img.id.replace('context-', '')
-                      handleDeleteContextImage(img.id, filename)
+                      // Extract filename from id (format: "pageName-filename")
+                      const filename = img.title
+                      handleDeletePageImage(img.id, filename)
                     }}
                   />
                 </Frame>
@@ -615,7 +642,7 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         </div>
       </div>
 
-      {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={isContextPage ? [...frames, ...contextImages] : frames} showToast={showToast} project={projectKey} />}
+      {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={[...frames, ...currentPageImages]} showToast={showToast} project={projectKey} />}
       {/* Comment overlay hidden for now */}
       {/* <CommentOverlay endpoint={annotationEndpoint} frames={frames} onCommentCountChange={setCommentCount} /> */}
       {import.meta.env.DEV && (

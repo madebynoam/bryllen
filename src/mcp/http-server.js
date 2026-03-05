@@ -704,9 +704,10 @@ const httpServer = createServer(async (req, res) => {
     // ── Context images routes ─────────────────────────────────────────────────
 
     // POST /context — save a context image from paste
+    // Supports optional `page` param for per-page storage (defaults to root context/)
     if (req.method === 'POST' && url.pathname === '/context') {
       const data = await parseBody(req)
-      const { project, iteration, dataUrl, filename } = data
+      const { project, iteration, page, dataUrl, filename } = data
 
       if (!project || !iteration || !dataUrl) {
         sendJson(res, 400, { error: 'project, iteration, and dataUrl are required' })
@@ -724,9 +725,11 @@ const httpServer = createServer(async (req, res) => {
       const base64Data = match[2]
       const buffer = Buffer.from(base64Data, 'base64')
 
-      // Build path: src/projects/<project>/<iteration>/context/<filename>
+      // Build path: src/projects/<project>/<iteration>/context/<page?>/<filename>
       const projectDir = join(process.cwd(), 'src', 'projects', project)
-      const contextDir = join(projectDir, iteration, 'context')
+      const contextDir = page
+        ? join(projectDir, iteration, 'context', page)
+        : join(projectDir, iteration, 'context')
       const finalFilename = filename || `context-${Date.now()}.${ext}`
       const filepath = join(contextDir, finalFilename)
 
@@ -738,32 +741,37 @@ const httpServer = createServer(async (req, res) => {
       writeFileSync(filepath, buffer)
       console.log(`[canvai] Context image saved: ${filepath}`)
 
-      const relativePath = `context/${finalFilename}`
-      sendJson(res, 201, { path: relativePath, filename: finalFilename, absolutePath: filepath })
+      const relativePath = page ? `context/${page}/${finalFilename}` : `context/${finalFilename}`
+      sendJson(res, 201, { path: relativePath, filename: finalFilename, absolutePath: filepath, page: page || null })
       return
     }
 
-    // GET /context — list context images for a project/iteration
+    // GET /context — list context images for a project/iteration (optionally per-page)
     if (req.method === 'GET' && url.pathname === '/context') {
       const project = url.searchParams.get('project')
       const iteration = url.searchParams.get('iteration')
+      const page = url.searchParams.get('page') // optional — if provided, gets per-page images
 
       if (!project || !iteration) {
         sendJson(res, 400, { error: 'project and iteration query params are required' })
         return
       }
 
-      const contextDir = join(process.cwd(), 'src', 'projects', project, iteration, 'context')
+      const contextDir = page
+        ? join(process.cwd(), 'src', 'projects', project, iteration, 'context', page)
+        : join(process.cwd(), 'src', 'projects', project, iteration, 'context')
 
       if (!existsSync(contextDir)) {
         sendJson(res, 200, { images: [], positions: {} })
         return
       }
 
-      const { readdirSync } = await import('fs')
-      const files = readdirSync(contextDir).filter(f =>
-        /\.(png|jpg|jpeg|gif|webp)$/i.test(f)
-      )
+      const { readdirSync, statSync } = await import('fs')
+      // Only list files, not subdirectories (subdirs are per-page folders)
+      const files = readdirSync(contextDir).filter(f => {
+        const fpath = join(contextDir, f)
+        return statSync(fpath).isFile() && /\.(png|jpg|jpeg|gif|webp)$/i.test(f)
+      })
 
       // Load positions from positions.json if it exists
       const positionsFile = join(contextDir, 'positions.json')
@@ -776,28 +784,30 @@ const httpServer = createServer(async (req, res) => {
 
       const images = files.map(filename => ({
         filename,
-        path: `context/${filename}`,
+        path: page ? `context/${page}/${filename}` : `context/${filename}`,
         // Build URL for browser to fetch the image
-        url: `/context-image?project=${encodeURIComponent(project)}&iteration=${encodeURIComponent(iteration)}&filename=${encodeURIComponent(filename)}`,
+        url: `/context-image?project=${encodeURIComponent(project)}&iteration=${encodeURIComponent(iteration)}${page ? `&page=${encodeURIComponent(page)}` : ''}&filename=${encodeURIComponent(filename)}`,
       }))
 
-      sendJson(res, 200, { images, positions })
+      sendJson(res, 200, { images, positions, page: page || null })
       return
     }
 
-    // PUT /context-positions — save context image positions
+    // PUT /context-positions — save context image positions (optionally per-page)
     if (req.method === 'PUT' && url.pathname === '/context-positions') {
       let body = ''
       req.on('data', chunk => { body += chunk })
       req.on('end', async () => {
         try {
-          const { project, iteration, positions } = JSON.parse(body)
+          const { project, iteration, page, positions } = JSON.parse(body)
           if (!project || !iteration || !positions) {
             sendJson(res, 400, { error: 'project, iteration, and positions are required' })
             return
           }
 
-          const contextDir = join(process.cwd(), 'src', 'projects', project, iteration, 'context')
+          const contextDir = page
+            ? join(process.cwd(), 'src', 'projects', project, iteration, 'context', page)
+            : join(process.cwd(), 'src', 'projects', project, iteration, 'context')
           if (!existsSync(contextDir)) {
             mkdirSync(contextDir, { recursive: true })
           }
@@ -812,10 +822,11 @@ const httpServer = createServer(async (req, res) => {
       return
     }
 
-    // GET /context-image — serve a context image file
+    // GET /context-image — serve a context image file (optionally per-page)
     if (req.method === 'GET' && url.pathname === '/context-image') {
       const project = url.searchParams.get('project')
       const iteration = url.searchParams.get('iteration')
+      const page = url.searchParams.get('page') // optional
       const filename = url.searchParams.get('filename')
 
       if (!project || !iteration || !filename) {
@@ -823,7 +834,9 @@ const httpServer = createServer(async (req, res) => {
         return
       }
 
-      const filepath = join(process.cwd(), 'src', 'projects', project, iteration, 'context', filename)
+      const filepath = page
+        ? join(process.cwd(), 'src', 'projects', project, iteration, 'context', page, filename)
+        : join(process.cwd(), 'src', 'projects', project, iteration, 'context', filename)
 
       if (!existsSync(filepath)) {
         sendJson(res, 404, { error: 'Image not found' })
@@ -845,10 +858,11 @@ const httpServer = createServer(async (req, res) => {
       return
     }
 
-    // DELETE /context — delete a context image
+    // DELETE /context — delete a context image (optionally per-page)
     if (req.method === 'DELETE' && url.pathname === '/context') {
       const project = url.searchParams.get('project')
       const iteration = url.searchParams.get('iteration')
+      const page = url.searchParams.get('page') // optional
       const filename = url.searchParams.get('filename')
 
       if (!project || !iteration || !filename) {
@@ -856,7 +870,9 @@ const httpServer = createServer(async (req, res) => {
         return
       }
 
-      const filepath = join(process.cwd(), 'src', 'projects', project, iteration, 'context', filename)
+      const filepath = page
+        ? join(process.cwd(), 'src', 'projects', project, iteration, 'context', page, filename)
+        : join(process.cwd(), 'src', 'projects', project, iteration, 'context', filename)
 
       if (!existsSync(filepath)) {
         sendJson(res, 404, { error: 'Image not found' })
