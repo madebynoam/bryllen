@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.44 — Paste Anywhere
+
+- Images can now be pasted on any page, not just Context
+- Pasted images stay on the page where you put them (physicality)
+- Per-page image storage in `context/<pageName>/` subfolders
+- Multi-select and connections work with images on any page
+- Annotation markers now show sequential numbers (1, 2, 3) instead of server IDs
+- Smaller font (10px) in marker dots for better fit with multi-digit numbers
+- Context page icon added to sidebar (Images icon)
+
 ## 0.0.43 — Share Button
 
 - Added `ShareButton` runtime component — allows designers to trigger `/canvai-share` directly from the canvas UI
