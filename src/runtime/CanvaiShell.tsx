@@ -253,12 +253,30 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
 
   const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
 
-  const handleNewProject = useCallback(async (payload: { name: string, description: string, prompt: string }) => {
+  const handleNewProject = useCallback(async (payload: { name: string; description: string; prompt: string; images?: Array<{ id: string; dataUrl: string; filename: string }> }) => {
     try {
+      // Upload inspiration images to context folder
+      if (payload.images && payload.images.length > 0) {
+        for (const img of payload.images) {
+          await fetch(`${annotationEndpoint}/context`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project: payload.name,
+              iteration: 'v1',
+              dataUrl: img.dataUrl,
+              filename: img.filename,
+            }),
+          })
+        }
+      }
+
+      // Create project annotation (without images in payload)
+      const { images: _, ...projectPayload } = payload
       await fetch(`${annotationEndpoint}/annotations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'project', comment: JSON.stringify(payload) }),
+        body: JSON.stringify({ type: 'project', comment: JSON.stringify(projectPayload) }),
       })
       showToast('Project submitted')
     } catch {
@@ -266,9 +284,29 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
     }
   }, [annotationEndpoint, showToast])
 
-  const handleNewIteration = useCallback(async (prompt: string) => {
+  const handleNewIteration = useCallback(async (prompt: string, images?: Array<{ id: string; dataUrl: string; filename: string }>) => {
     const projectName = activeProject?.project ?? ''
+    // Figure out next iteration name (v1, v2, etc.)
+    const nextIterNum = (activeProject?.iterations?.length ?? 0) + 1
+    const nextIterName = `v${nextIterNum}`
+
     try {
+      // Upload inspiration images to new iteration's context folder
+      if (images && images.length > 0) {
+        for (const img of images) {
+          await fetch(`${annotationEndpoint}/context`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project: projectName,
+              iteration: nextIterName,
+              dataUrl: img.dataUrl,
+              filename: img.filename,
+            }),
+          })
+        }
+      }
+
       await fetch(`${annotationEndpoint}/annotations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,15 +319,32 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
   }, [annotationEndpoint, showToast, activeProject])
 
   // Handle prompt request submission (from agent's /canvai-new without prompt)
-  const handlePromptRequestSubmit = useCallback(async (payload: { name: string; description: string; prompt: string }) => {
+  const handlePromptRequestSubmit = useCallback(async (payload: { name: string; description: string; prompt: string; images?: Array<{ id: string; dataUrl: string; filename: string }> }) => {
     if (!promptRequest) return
 
     try {
-      // Create the actual project annotation with the prompt
+      // Upload inspiration images to context folder
+      if (payload.images && payload.images.length > 0) {
+        for (const img of payload.images) {
+          await fetch(`${annotationEndpoint}/context`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project: payload.name,
+              iteration: 'v1',
+              dataUrl: img.dataUrl,
+              filename: img.filename,
+            }),
+          })
+        }
+      }
+
+      // Create the actual project annotation with the prompt (without images)
+      const { images: _, ...projectPayload } = payload
       await fetch(`${annotationEndpoint}/annotations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'project', comment: JSON.stringify(payload) }),
+        body: JSON.stringify({ type: 'project', comment: JSON.stringify(projectPayload) }),
       })
       // Resolve the original prompt-request annotation
       await fetch(`${annotationEndpoint}/annotations/${promptRequest.id}/resolve`, { method: 'POST' })

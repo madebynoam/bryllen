@@ -1,11 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { X } from 'lucide-react'
 import { Overlay, DialogCard, DialogActions, ActionButton } from './Menu'
-import { N, S, R, T } from './tokens'
+import { N, D, S, R, T, FONT } from './tokens'
+
+interface PastedImage {
+  id: string
+  dataUrl: string
+  filename: string
+}
 
 interface NewProjectDialogProps {
   open: boolean
   onClose: () => void
-  onSubmit: (payload: { name: string, description: string, prompt: string }) => void
+  onSubmit: (payload: { name: string; description: string; prompt: string; images?: PastedImage[] }) => void
   /** When provided, hide name field and use this value */
   defaultName?: string
 }
@@ -15,7 +22,7 @@ const inputStyle: React.CSSProperties = {
   background: N.canvas,
   color: N.txtPri,
   border: `1px solid ${N.border}`,
-  borderRadius: R.ui, cornerShape: 'squircle',
+  borderRadius: R.ui,
   padding: S.md,
   fontSize: T.ui,
   lineHeight: 1.5,
@@ -24,33 +31,124 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
+function ImageThumb({ image, onRemove }: { image: PastedImage; onRemove: () => void }) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: 64,
+        height: 64,
+        borderRadius: R.ui,
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <img
+        src={image.dataUrl}
+        alt=""
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+        }}
+      />
+      {hovered && (
+        <button
+          onClick={onRemove}
+          style={{
+            position: 'absolute',
+            top: 4,
+            right: 4,
+            width: 20,
+            height: 20,
+            borderRadius: '50%',
+            border: 'none',
+            background: 'oklch(0.22 0.005 240 / 0.9)',
+            color: D.text,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'default',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <X size={12} strokeWidth={2} />
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function NewProjectDialog({ open, onClose, onSubmit, defaultName }: NewProjectDialogProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [prompt, setPrompt] = useState('')
+  const [images, setImages] = useState<PastedImage[]>([])
   const nameRef = useRef<HTMLInputElement>(null)
-  const promptRef = useRef<HTMLTextAreaElement>(null)
+  const descRef = useRef<HTMLTextAreaElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (open) {
-      // If defaultName provided, focus prompt; otherwise focus name
-      if (defaultName && promptRef.current) {
-        promptRef.current.focus()
+      // If defaultName provided, focus description; otherwise focus name
+      if (defaultName && descRef.current) {
+        descRef.current.focus()
       } else if (nameRef.current) {
         nameRef.current.focus()
       }
+    } else {
+      // Reset state when dialog closes
+      setImages([])
     }
   }, [open, defaultName])
+
+  // Handle paste anywhere in dialog
+  useEffect(() => {
+    if (!open) return
+
+    function handlePaste(e: ClipboardEvent) {
+      if (!e.clipboardData) return
+
+      for (const item of e.clipboardData.items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          const blob = item.getAsFile()
+          if (!blob) continue
+
+          const reader = new FileReader()
+          reader.onload = () => {
+            const dataUrl = reader.result as string
+            const ext = item.type.split('/')[1] || 'png'
+            const filename = `inspiration-${Date.now()}.${ext}`
+            setImages(prev => [...prev, { id: crypto.randomUUID(), dataUrl, filename }])
+          }
+          reader.readAsDataURL(blob)
+          return
+        }
+      }
+    }
+
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [open])
 
   const handleSubmit = useCallback(() => {
     const effectiveName = defaultName || name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-')
     if (!effectiveName) return
-    onSubmit({ name: effectiveName, description: description.trim(), prompt: prompt.trim() })
+    onSubmit({
+      name: effectiveName,
+      description: description.trim(),
+      prompt: description.trim(), // Use description as prompt for backwards compat
+      images: images.length > 0 ? images : undefined,
+    })
     setName('')
     setDescription('')
-    setPrompt('')
+    setImages([])
     onClose()
-  }, [name, description, prompt, onSubmit, onClose, defaultName])
+  }, [name, description, images, onSubmit, onClose, defaultName])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -58,21 +156,25 @@ export function NewProjectDialog({ open, onClose, onSubmit, defaultName }: NewPr
     }
   }, [handleSubmit])
 
+  const removeImage = useCallback((id: string) => {
+    setImages(prev => prev.filter(img => img.id !== id))
+  }, [])
+
   // When defaultName is provided, this is a "prompt-only" dialog
   const isPromptOnly = !!defaultName
-  const dialogTitle = isPromptOnly ? `What would you like to design?` : 'New project'
-  const canSubmit = isPromptOnly ? !!prompt.trim() : !!name.trim()
+  const dialogTitle = isPromptOnly ? 'What would you like to design?' : 'New project'
+  const canSubmit = isPromptOnly ? !!description.trim() : !!name.trim()
 
   return (
     <Overlay open={open} onClose={onClose}>
-      <div onKeyDown={handleKeyDown}>
-        <DialogCard title={dialogTitle} width={520}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: S.md }}>
-            {/* Hide name field when defaultName is provided */}
+      <div ref={dialogRef} onKeyDown={handleKeyDown}>
+        <DialogCard title={dialogTitle} width={480}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: S.lg }}>
+            {/* Name field - hide when defaultName provided */}
             {!isPromptOnly && (
               <div>
                 <label style={{ display: 'block', fontSize: T.ui, color: N.txtSec, marginBottom: S.xs, fontWeight: 500 }}>
-                  Project name
+                  Name
                 </label>
                 <input
                   ref={nameRef}
@@ -83,38 +185,56 @@ export function NewProjectDialog({ open, onClose, onSubmit, defaultName }: NewPr
                 />
               </div>
             )}
-            {!isPromptOnly && (
-              <div>
-                <label style={{ display: 'block', fontSize: T.ui, color: N.txtSec, marginBottom: S.xs, fontWeight: 500 }}>
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="What are you designing?"
-                  rows={2}
-                  style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }}
-                />
-              </div>
-            )}
+
+            {/* Description field */}
             <div>
               <label style={{ display: 'block', fontSize: T.ui, color: N.txtSec, marginBottom: S.xs, fontWeight: 500 }}>
-                {isPromptOnly ? 'Describe your design' : 'First component'}
+                What are you designing?
               </label>
               <textarea
-                ref={promptRef}
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                placeholder={isPromptOnly ? 'A dashboard with user stats, activity graph, and recent notifications...' : 'Describe your first component or paste a sketch'}
-                rows={isPromptOnly ? 4 : 3}
-                style={{ ...inputStyle, minHeight: isPromptOnly ? 96 : 72, resize: 'vertical' }}
+                ref={descRef}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Describe what you're building — a dashboard, settings page, onboarding flow..."
+                rows={4}
+                style={{ ...inputStyle, minHeight: 96, resize: 'vertical' }}
               />
             </div>
+
+            {/* Inspiration images */}
+            <div>
+              <label style={{ display: 'block', fontSize: T.ui, color: N.txtSec, marginBottom: S.xs, fontWeight: 500 }}>
+                Inspiration
+                <span style={{ fontWeight: 400, marginLeft: S.xs, color: N.txtTer }}>
+                  (paste images)
+                </span>
+              </label>
+              {images.length > 0 ? (
+                <div style={{ display: 'flex', gap: S.sm, flexWrap: 'wrap' }}>
+                  {images.map(img => (
+                    <ImageThumb key={img.id} image={img} onRemove={() => removeImage(img.id)} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  border: `1px dashed ${N.border}`,
+                  borderRadius: R.ui,
+                  padding: S.lg,
+                  textAlign: 'center',
+                  color: N.txtTer,
+                  fontSize: T.ui,
+                  fontFamily: FONT,
+                }}>
+                  Cmd+V to paste screenshots or mockups
+                </div>
+              )}
+            </div>
           </div>
+
           <DialogActions>
             <ActionButton variant="ghost" onClick={onClose}>Cancel</ActionButton>
             <ActionButton variant="primary" disabled={!canSubmit} onClick={handleSubmit}>
-              {isPromptOnly ? 'Start designing' : 'Create'}
+              {isPromptOnly ? 'Start' : 'Create'}
             </ActionButton>
           </DialogActions>
         </DialogCard>
