@@ -83,6 +83,20 @@ Start the Canvai dev server and enter watch mode.
    5. Run `npx canvai resolve <id>`
    6. Run `npx canvai watch` again — back to waiting
 
+   **Share request arrives** (JSON has `type: 'share'`) — deploy to GitHub Pages:
+   1. Parse the JSON comment: `{ project: '<name>' }`
+   2. Run `npx canvai progress <id> "Checking GitHub authentication..."`
+   3. Check GitHub auth: run `gh auth status`
+      - If not logged in: check for token in `~/.canvai/auth.json`
+      - If token exists: set `GH_TOKEN` env var for gh-pages
+      - If no token: tell designer to click "Login with GitHub" in the Share popover
+   4. Check gh CLI: run `which gh`
+      - If not installed: use `npm:gh-pages` package directly (it uses GH_TOKEN)
+   5. Run `npx canvai progress <id> "Building project..."`
+   6. Invoke `/canvai-share <project-name>` — this handles build, deploy, and URL writing
+   7. Run `npx canvai resolve <id>`
+   8. Run `npx canvai watch` again — back to waiting
+
    **Context image annotation arrives** (annotation on a `Context Image` component) — use the image for inspiration:
    - Run `npx canvai context --project <name> --iteration <v>` to get image paths
    - Read the images with the Read tool to analyze via Vision

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.43 — Share Button
+
+- Added `ShareButton` runtime component — allows designers to trigger `/canvai-share` directly from the canvas UI
+- Added `SharePopover` runtime component — shows GitHub auth flow, deploy status, and shareable URL
+- Integrated GitHub OAuth device flow into the Share UI (reuses `~/.canvai/auth.json` token)
+- ShareButton states: checking auth, needs-auth, idle (ready to deploy), sharing (in progress), shared (shows URL)
+- SharePopover modes: login prompt, deploy button, URL display with copy/open actions, re-deploy option
+- Added `type: 'share'` annotation type to http-server.js for immediate processing
+- TopBar now includes ShareButton in right section (DEV mode only)
+- Updated canvai-design skill documentation with share request handling
+
 ## V10 — Live App Mirror
 
 - New iteration matching the actual running Canvai app (light mode)

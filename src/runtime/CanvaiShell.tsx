@@ -533,6 +533,8 @@ export function CanvaiShell({ manifests, annotationEndpoint = 'http://localhost:
         onToggleSidebar={() => setSidebarOpen(o => !o)}
         onNewIteration={() => setIterDialogOpen(true)}
         onNewProject={() => setProjectDialogOpen(true)}
+        shareUrl={activeProject?.shareUrl}
+        projectName={activeProject?.project ?? ''}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>

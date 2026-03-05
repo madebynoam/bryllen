@@ -1,6 +1,7 @@
 import { ProjectPicker } from './ProjectPicker'
 import { PickerDropdown } from './PickerDropdown'
 import { AnnotationPanelWidget } from './AnnotationPanel'
+import { ShareButton } from './ShareButton'
 import { PanelLeft, Plus } from 'lucide-react'
 import { MenuRow } from './Menu'
 import { N, S, R, T, ICON, FONT, DIM } from './tokens'
@@ -19,6 +20,8 @@ interface TopBarProps {
   onToggleSidebar: () => void
   onNewIteration?: () => void
   onNewProject?: () => void
+  shareUrl?: string
+  projectName: string
 }
 
 function SidebarIcon() {
@@ -39,6 +42,8 @@ export function TopBar({
   onToggleSidebar,
   onNewIteration,
   onNewProject,
+  shareUrl,
+  projectName,
 }: TopBarProps) {
   // Reverse so newest iteration is on top
   const reversedIterations = [...iterations].reverse()
@@ -141,6 +146,15 @@ export function TopBar({
         {/* Annotation panel */}
         {import.meta.env.DEV && (
           <AnnotationPanelWidget endpoint={annotationEndpoint} />
+        )}
+
+        {/* Share button — DEV only (needs annotation server) */}
+        {import.meta.env.DEV && projectName && (
+          <ShareButton
+            shareUrl={shareUrl}
+            projectName={projectName}
+            annotationEndpoint={annotationEndpoint}
+          />
         )}
 
         {/* Comment count badge */}

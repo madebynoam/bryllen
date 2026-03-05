@@ -39,7 +39,7 @@ EXPECTED_FILES=(
   "src/App.tsx"
   "src/index.css"
   "src/vite-env.d.ts"
-  ".canvai"
+  ".canvai-version"
 )
 
 MISSING=0
@@ -56,13 +56,13 @@ if [ "$MISSING" -gt 0 ]; then
 fi
 echo "  All expected files present."
 
-# Verify .canvai has a version
-echo "==> Checking .canvai version marker..."
-if ! node -e "const d = JSON.parse(require('fs').readFileSync('.canvai','utf-8')); if(!d.version) process.exit(1)"; then
-  echo "FAIL: .canvai is missing or has no version"
+# Verify .canvai-version has a version
+echo "==> Checking .canvai-version marker..."
+if ! node -e "const d = JSON.parse(require('fs').readFileSync('.canvai-version','utf-8')); if(!d.version) process.exit(1)"; then
+  echo "FAIL: .canvai-version is missing or has no version"
   exit 1
 fi
-echo "  .canvai version marker OK."
+echo "  .canvai-version marker OK."
 
 # Typecheck
 echo "==> Running tsc --noEmit..."
