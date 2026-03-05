@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { SquareMousePointer, Trash2, Pencil, Lightbulb, Check } from 'lucide-react'
+import { SquareMousePointer, Trash2, Pencil, Lightbulb, Check, Minus, Plus } from 'lucide-react'
 import { N, A, F, D, S, R, T, ICON, FONT } from './tokens'
 import { DialogCard, DialogActions, ActionButton } from './Menu'
 import type { CanvasFrame, CanvasComponentFrame, Connection } from './types'
@@ -126,29 +126,138 @@ function ModeChip({ option, active, onClick }: {
   )
 }
 
-function ModeToggle({ value, onChange, showPick = true }: {
+/* ── Variation stepper for ideate mode ── */
+function VariationStepper({ count, onChange }: { count: number; onChange: (n: number) => void }) {
+  const [hovered, setHovered] = useState(false)
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (hovered && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      setTooltipPos({ x: rect.left + rect.width / 2, y: rect.bottom + 6 })
+    } else {
+      setTooltipPos(null)
+    }
+  }, [hovered])
+
+  return (
+    <>
+      <div
+        ref={containerRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          background: 'oklch(0.94 0.003 250)',
+          borderRadius: R.ui,
+          padding: 2,
+        }}
+      >
+        <button
+          onClick={() => onChange(Math.max(3, count - 1))}
+          style={{
+            width: 22,
+            height: 22,
+            border: 'none',
+            borderRadius: R.ui,
+            background: count <= 3 ? 'transparent' : 'oklch(0.97 0.003 250)',
+            color: count <= 3 ? N.txtTer : N.txtSec,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'default',
+          }}
+          disabled={count <= 3}
+        >
+          <Minus size={12} strokeWidth={2} />
+        </button>
+        <span style={{
+          minWidth: 20,
+          textAlign: 'center',
+          fontSize: 12,
+          fontWeight: 600,
+          fontFamily: FONT,
+          color: N.txtPri,
+        }}>
+          {count}
+        </span>
+        <button
+          onClick={() => onChange(Math.min(10, count + 1))}
+          style={{
+            width: 22,
+            height: 22,
+            border: 'none',
+            borderRadius: R.ui,
+            background: count >= 10 ? 'transparent' : 'oklch(0.97 0.003 250)',
+            color: count >= 10 ? N.txtTer : N.txtSec,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'default',
+          }}
+          disabled={count >= 10}
+        >
+          <Plus size={12} strokeWidth={2} />
+        </button>
+      </div>
+      {tooltipPos && (
+        <div style={{
+          position: 'fixed',
+          left: tooltipPos.x,
+          top: tooltipPos.y,
+          transform: 'translateX(-50%)',
+          background: 'oklch(0.18 0.005 250)',
+          color: D.text,
+          fontSize: 11,
+          fontFamily: FONT,
+          padding: '6px 10px',
+          borderRadius: R.ui,
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          zIndex: 100000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        }}>
+          <div style={{ fontWeight: 500 }}>Variations</div>
+          <div style={{ color: 'oklch(0.6 0 0)', marginTop: 2, fontSize: 10 }}>How many directions to explore</div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function ModeToggle({ value, onChange, showPick = true, variationCount, onVariationChange }: {
   value: AnnotationMode
   onChange: (mode: AnnotationMode) => void
   showPick?: boolean
+  variationCount?: number
+  onVariationChange?: (n: number) => void
 }) {
   const options = showPick ? MODES : MODES.filter(m => m.mode !== 'pick')
 
   return (
-    <div style={{
-      display: 'flex',
-      gap: 2,
-      background: 'oklch(0.97 0.003 250)',
-      borderRadius: R.ui,
-      padding: 2,
-    }}>
-      {options.map(opt => (
-        <ModeChip
-          key={opt.mode}
-          option={opt}
-          active={value === opt.mode}
-          onClick={() => onChange(opt.mode)}
-        />
-      ))}
+    <div style={{ display: 'flex', alignItems: 'center', gap: S.sm }}>
+      <div style={{
+        display: 'flex',
+        gap: 2,
+        background: 'oklch(0.97 0.003 250)',
+        borderRadius: R.ui,
+        padding: 2,
+      }}>
+        {options.map(opt => (
+          <ModeChip
+            key={opt.mode}
+            option={opt}
+            active={value === opt.mode}
+            onClick={() => onChange(opt.mode)}
+          />
+        ))}
+      </div>
+      {value === 'ideate' && variationCount !== undefined && onVariationChange && (
+        <VariationStepper count={variationCount} onChange={onVariationChange} />
+      )}
     </div>
   )
 }
@@ -313,6 +422,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   const [target, setTarget] = useState<TargetInfo | null>(null)
   const [comment, setComment] = useState('')
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>('refine')
+  const [variationCount, setVariationCount] = useState(5)
   const [buttonState, setButtonState] = useState<'idle' | 'hover' | 'pressed'>('idle')
   const [markers, setMarkers] = useState<AnnotationMarker[]>([])
   const [markerRects, setMarkerRects] = useState<Map<number, DOMRect>>(new Map())
@@ -726,7 +836,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
     // Append ideate instruction so agent sees it clearly
     const finalComment = annotationMode === 'ideate'
-      ? `${comment.trim()}\n\n---\n[IDEATE MODE: You MUST generate at least 5 genuinely different variations. Each must be a distinct design direction — different layout, hierarchy, or approach. Do NOT generate just 1 or 2.]`
+      ? `${comment.trim()}\n\n---\n[IDEATE MODE: You MUST generate exactly ${variationCount} genuinely different variations. Each must be a distinct design direction — different layout, hierarchy, or approach. Not 1, not 2 — exactly ${variationCount}.]`
       : comment.trim()
 
     const body = {
@@ -790,7 +900,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     setTarget(null)
     setComment('')
     setEditingMarkerId(null)
-  }, [target, comment, endpoint, editingMarkerId, toast, project, annotationMode])
+  }, [target, comment, endpoint, editingMarkerId, toast, project, annotationMode, variationCount])
 
   const handleCancel = useCallback(() => {
     // If canceling a new connection, remove it
@@ -1143,6 +1253,8 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
                 value={annotationMode}
                 onChange={setAnnotationMode}
                 showPick={!!target.frameId && target.elementTag !== 'connection' && target.elementTag !== 'canvas'}
+                variationCount={variationCount}
+                onVariationChange={setVariationCount}
               />
               <div style={{ flex: 1 }} />
               <ActionButton variant="ghost" onClick={handleCancel}>Cancel</ActionButton>
