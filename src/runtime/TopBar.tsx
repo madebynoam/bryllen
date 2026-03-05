@@ -149,11 +149,6 @@ export function TopBar({
 
       {/* Right section — annotation UI hidden in production builds */}
       <div style={{ display: 'flex', alignItems: 'center', gap: S.md, flex: '0 0 auto' }}>
-        {/* Annotation panel */}
-        {import.meta.env.DEV && (
-          <AnnotationPanelWidget endpoint={annotationEndpoint} />
-        )}
-
         {/* Update available button */}
         {updateAvailable && onUpdateClick && (
           <button
@@ -179,6 +174,11 @@ export function TopBar({
             <ArrowUp size={ICON.sm} strokeWidth={2} />
             Update available
           </button>
+        )}
+
+        {/* Annotation panel */}
+        {import.meta.env.DEV && (
+          <AnnotationPanelWidget endpoint={annotationEndpoint} />
         )}
 
         {/* Share button — DEV only (needs annotation server) */}
