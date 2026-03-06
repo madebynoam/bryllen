@@ -232,6 +232,15 @@ interface BryllenShellInnerProps {
 
 function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenShellInnerProps) {
   const { cssVars } = useTheme()
+
+  // Apply CSS vars to document root so portals inherit them
+  useEffect(() => {
+    const root = document.documentElement
+    Object.entries(cssVars).forEach(([key, value]) => {
+      root.style.setProperty(key, value)
+    })
+  }, [cssVars])
+
   const [activeProjectIndex, setActiveProjectIndex] = useState(() => urlState?.projectIdx ?? loadProjectIndex(manifests.length))
   const [urlIterationIdx] = useState(() => urlState?.iterationIdx)
   const [urlPageIdx] = useState(() => urlState?.pageIdx)
