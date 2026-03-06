@@ -97,16 +97,20 @@ Start the Bryllen dev server and enter watch mode.
    7. Run `npx bryllen resolve <id>`
    8. Run `npx bryllen watch` again — back to waiting
 
-   **Pick request arrives** (JSON has `type: 'pick'`) — promote the picked direction to a new iteration:
-   1. Read the `frameId` and `comment` from the annotation
+   **Pick request arrives** (JSON has `type: 'pick'`) — promote the picked direction(s) to a new iteration:
+   1. Read the `frameId`, `frameIds`, and `comment` from the annotation
+      - `frameIds` is an array when multiple frames were selected (marquee multi-select)
+      - `frameId` is a `+`-joined string of all IDs (e.g., `"dir-a+dir-b+dir-c"`)
    2. Run `npx bryllen progress <id> "Picking direction..."`
-   3. Find the frame's source file (component or page) from the frameId
+   3. Find each frame's source file (component or page) from the frameIds
    4. Create a new iteration that:
-      - Copies the picked direction as the starting point
+      - **Single pick:** Copies the picked direction as the starting point
+      - **Multi-pick:** Combines ALL picked directions — extract shared patterns, merge complementary elements, resolve conflicts thoughtfully
       - Builds out all states (loading, error, empty, success, etc.)
-      - Names it appropriately (e.g., "V3 — Picked Direction")
+      - Names it appropriately (e.g., "V3 — Picked Direction" or "V3 — Combined")
    5. Update the **previous iteration's manifest** entry:
-      - Set `pickedFrameId` to the chosen frame's ID (this fades other frames)
+      - **Single pick:** Set `pickedFrameId` to the chosen frame's ID (this fades other frames)
+      - **Multi-pick:** Set `pickedFrameIds` to the array of chosen frame IDs (all picked frames stay unfaded)
       - Set `frozen: true`
    6. Add the new iteration to manifest with `frozen: false`
    7. Run `npx bryllen progress <id> "Taking screenshot..."`
@@ -114,6 +118,13 @@ Start the Bryllen dev server and enter watch mode.
    9. Run `npx bryllen resolve <id>` (auto-commits)
    10. Log to `CHANGELOG.md`
    - Run `npx bryllen watch` again — back to waiting
+
+   **Multi-pick strategy:**
+   When the designer selects multiple frames, they want to combine strengths from each:
+   - Extract what works best from each direction (layout from A, color palette from B, interaction from C)
+   - Resolve conflicts by choosing the stronger solution or creating a synthesis
+   - The result should feel cohesive, not like a Frankenstein of disconnected parts
+   - When in doubt, ask the designer which element they prefer via a comment in the annotation response
 
    **Context image annotation arrives** (annotation on a `Context Image` component) — use the image for inspiration:
    - Run `npx bryllen context --project <name> --iteration <v>` to get image paths

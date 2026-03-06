@@ -17,8 +17,16 @@ interface DragState {
   lockedTargets: Array<{ frameId: string; point: { x: number; y: number } }>
 }
 
+interface MarqueeState {
+  startPoint: { x: number; y: number }   // Canvas-space
+  currentPoint: { x: number; y: number } // Canvas-space
+  screenStart: { x: number; y: number }  // Screen-space for rendering
+  screenCurrent: { x: number; y: number }
+}
+
 interface TargetInfo {
   frameId: string
+  frameIds?: string[]  // For multi-select
   componentName: string
   props: Record<string, unknown>
   selector: string
@@ -27,6 +35,7 @@ interface TargetInfo {
   elementText: string
   computedStyles: Record<string, string>
   rect: DOMRect
+  frames?: Array<{ frameId: string; title: string; isImage: boolean }>  // For multi-select
 }
 
 interface AnnotationOverlayProps {
@@ -312,6 +321,34 @@ function MarkerDot({ displayIndex, comment, rect, onClick, progress }: {
   )
 }
 
+/* ── Marquee selection rectangle ── */
+function MarqueeRect({ screenStart, screenCurrent }: {
+  screenStart: { x: number; y: number }
+  screenCurrent: { x: number; y: number }
+}) {
+  const left = Math.min(screenStart.x, screenCurrent.x)
+  const top = Math.min(screenStart.y, screenCurrent.y)
+  const width = Math.abs(screenCurrent.x - screenStart.x)
+  const height = Math.abs(screenCurrent.y - screenStart.y)
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left,
+        top,
+        width,
+        height,
+        border: `2px dashed ${F.marker}`,
+        borderRadius: R.ui,
+        background: `oklch(from ${F.marker} l c h / 0.1)`,
+        pointerEvents: 'none',
+        zIndex: 99999,
+      }}
+    />
+  )
+}
+
 /* ── Hover button wrapper ── */
 function HoverButton({ children, onClick, baseStyle, hoverBg, title }: {
   children: React.ReactNode
@@ -404,6 +441,32 @@ function canvasToScreen(cx: number, cy: number): { x: number; y: number } | null
   }
 }
 
+/** Find frames whose bounds intersect the given canvas-space rectangle */
+function findFramesInRect(
+  frames: CanvasFrame[],
+  rect: { x1: number; y1: number; x2: number; y2: number }
+): CanvasFrame[] {
+  // Normalize rect (ensure x1 < x2, y1 < y2)
+  const minX = Math.min(rect.x1, rect.x2)
+  const maxX = Math.max(rect.x1, rect.x2)
+  const minY = Math.min(rect.y1, rect.y2)
+  const maxY = Math.max(rect.y1, rect.y2)
+
+  return frames.filter(frame => {
+    // Frame bounds in canvas-space
+    const frameMinX = frame.x
+    const frameMaxX = frame.x + frame.width
+    const frameMinY = frame.y
+    const frameMaxY = frame.y + frame.height
+
+    // Check for intersection (not just containment)
+    const intersectsX = frameMinX < maxX && frameMaxX > minX
+    const intersectsY = frameMinY < maxY && frameMaxY > minY
+
+    return intersectsX && intersectsY
+  })
+}
+
 interface AnnotationMarker {
   id: number
   serverId: string
@@ -435,6 +498,8 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   // Connection drag state
   const [dragState, setDragState] = useState<DragState | null>(null)
   const [connections, setConnections] = useState<Connection[]>([])
+  // Marquee selection state
+  const [marqueeState, setMarqueeState] = useState<MarqueeState | null>(null)
   const [connectionRects, setConnectionRects] = useState<Map<string, { from: { x: number; y: number }; to: { x: number; y: number } }>>(new Map())
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null)
   const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null)
@@ -558,6 +623,19 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   }, [])
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // Update marquee state if marquee is active
+    if (marqueeState) {
+      const cp = screenToCanvas(e.clientX, e.clientY)
+      if (cp) {
+        setMarqueeState(prev => prev ? {
+          ...prev,
+          currentPoint: cp,
+          screenCurrent: { x: e.clientX, y: e.clientY },
+        } : null)
+      }
+      return
+    }
+
     // Update drag state if dragging
     if (dragState) {
       const overlay = overlayRef.current
@@ -661,26 +739,144 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
         return
       }
     } else {
-      // Clicked on empty canvas — canvas-level note
+      // Clicked on empty canvas — start marquee selection
       const cp = screenToCanvas(e.clientX, e.clientY)
-      setTarget({
-        frameId: '',
-        componentName: 'Canvas',
-        props: cp ? { __canvasPoint: cp } : {},
-        selector: '',
-        elementTag: 'canvas',
-        elementClasses: '',
-        elementText: '',
-        computedStyles: {},
-        rect: new DOMRect(e.clientX, e.clientY, 0, 0),
-      })
-      setHighlight(null)
-      setComment('')
-      setMode('commenting')
+      if (cp) {
+        setMarqueeState({
+          startPoint: cp,
+          currentPoint: cp,
+          screenStart: { x: e.clientX, y: e.clientY },
+          screenCurrent: { x: e.clientX, y: e.clientY },
+        })
+        setHighlight(null)
+      }
     }
   }, [mode, frames, getFrameCenter])
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    // Handle marquee selection release
+    if (marqueeState) {
+      const dx = e.clientX - marqueeState.screenStart.x
+      const dy = e.clientY - marqueeState.screenStart.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      if (dist < 10) {
+        // It was just a click, not a drag — create a canvas note
+        const cp = marqueeState.startPoint
+        setTarget({
+          frameId: '',
+          componentName: 'Canvas',
+          props: { __canvasPoint: cp },
+          selector: '',
+          elementTag: 'canvas',
+          elementClasses: '',
+          elementText: '',
+          computedStyles: {},
+          rect: new DOMRect(e.clientX, e.clientY, 0, 0),
+        })
+        setHighlight(null)
+        setComment('')
+        setMarqueeState(null)
+        setMode('commenting')
+        return
+      }
+
+      // Find all frames in the marquee rectangle
+      const selectedFrames = findFramesInRect(frames, {
+        x1: marqueeState.startPoint.x,
+        y1: marqueeState.startPoint.y,
+        x2: marqueeState.currentPoint.x,
+        y2: marqueeState.currentPoint.y,
+      })
+
+      setMarqueeState(null)
+
+      if (selectedFrames.length === 0) {
+        // No frames selected — treat as canvas note at center of marquee
+        const cp = {
+          x: (marqueeState.startPoint.x + marqueeState.currentPoint.x) / 2,
+          y: (marqueeState.startPoint.y + marqueeState.currentPoint.y) / 2,
+        }
+        const screenPos = canvasToScreen(cp.x, cp.y)
+        setTarget({
+          frameId: '',
+          componentName: 'Canvas',
+          props: { __canvasPoint: cp },
+          selector: '',
+          elementTag: 'canvas',
+          elementClasses: '',
+          elementText: '',
+          computedStyles: {},
+          rect: new DOMRect(screenPos?.x ?? e.clientX, screenPos?.y ?? e.clientY, 0, 0),
+        })
+        setHighlight(null)
+        setComment('')
+        setMode('commenting')
+        return
+      }
+
+      if (selectedFrames.length === 1) {
+        // Single frame — existing single-target behavior
+        const frame = selectedFrames[0]
+        const frameEl = document.querySelector(`[data-frame-id="${frame.id}"]`)
+        const isImage = isCanvasImageFrame(frame)
+        const componentName = isImage
+          ? 'Context Image'
+          : (frame as CanvasComponentFrame)?.component?.displayName ?? (frame as CanvasComponentFrame)?.component?.name ?? 'Unknown'
+        const props = isImage
+          ? { src: frame.src }
+          : (frame as CanvasComponentFrame)?.props ?? {}
+
+        setTarget({
+          frameId: frame.id,
+          componentName,
+          props,
+          selector: isImage ? 'img' : '',
+          elementTag: isImage ? 'img' : 'div',
+          elementClasses: '',
+          elementText: '',
+          computedStyles: {},
+          rect: frameEl?.getBoundingClientRect() ?? new DOMRect(e.clientX, e.clientY, 0, 0),
+        })
+        setComment('')
+        setHighlight(null)
+        setMode('commenting')
+        return
+      }
+
+      // Multiple frames — multi-select pick
+      const frameIds = selectedFrames.map(f => f.id)
+      const frameInfos = selectedFrames.map(f => ({
+        frameId: f.id,
+        title: f.title,
+        isImage: isCanvasImageFrame(f),
+      }))
+
+      // Calculate center of all selected frames for dialog positioning
+      const avgX = selectedFrames.reduce((sum, f) => sum + f.x + f.width / 2, 0) / selectedFrames.length
+      const avgY = selectedFrames.reduce((sum, f) => sum + f.y + f.height / 2, 0) / selectedFrames.length
+      const screenPos = canvasToScreen(avgX, avgY)
+
+      setTarget({
+        frameId: frameIds.join('+'),
+        frameIds,
+        componentName: 'Multi-Select',
+        props: { frameIds },
+        selector: '',
+        elementTag: 'multi-select',
+        elementClasses: '',
+        elementText: '',
+        computedStyles: {},
+        rect: new DOMRect(screenPos?.x ?? e.clientX, screenPos?.y ?? e.clientY, 0, 0),
+        frames: frameInfos,
+      })
+      setAnnotationMode('pick')  // Default to pick for multi-select
+      setComment('')
+      setHighlight(null)
+      setMode('commenting')
+      return
+    }
+
     if (!dragState) return
 
     // Collect all target frames (locked + final hover target)
@@ -806,17 +1002,19 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     // Cancel drag
     setDragState(null)
     setHighlight(null)
-  }, [dragState, frames, isContextImageFrame, getFrameCenter])
+  }, [dragState, marqueeState, frames, isContextImageFrame, getFrameCenter])
 
   const handleApply = useCallback(async () => {
-    if (!target || !comment.trim()) return
+    // Multi-select pick allows empty comment; others require it
+    const isMultiSelect = target?.elementTag === 'multi-select'
+    if (!target || (!isMultiSelect && !comment.trim())) return
 
     // Check if this is a connection annotation
     const isConnection = target.elementTag === 'connection'
     const connectionId = (target.props as any)?.__connectionId as string | undefined
 
     // Strip internal props before sending to server
-    const { __canvasPoint: _cp, __connectionId: _connId, ...serverProps } = target.props as any
+    const { __canvasPoint: _cp, __connectionId: _connId, frameIds: _fids, ...serverProps } = target.props as any
 
     // Append ideate instruction so agent sees it clearly
     const finalComment = annotationMode === 'ideate'
@@ -825,8 +1023,9 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
     const body = {
       project,
-      type: isConnection ? 'connection' : annotationMode === 'pick' ? 'pick' : undefined,
+      type: isConnection ? 'connection' : (isMultiSelect || annotationMode === 'pick') ? 'pick' : undefined,
       frameId: target.frameId,
+      frameIds: target.frameIds,  // Include frameIds array for multi-select
       componentName: target.componentName,
       props: serverProps,
       selector: target.selector,
@@ -835,7 +1034,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       elementText: target.elementText,
       computedStyles: target.computedStyles,
       comment: finalComment,
-      mode: annotationMode,
+      mode: isMultiSelect ? 'pick' : annotationMode,
     }
 
     try {
@@ -902,6 +1101,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     setEditingMarkerId(null)
     setEditingConnectionId(null)
     setDragState(null)
+    setMarqueeState(null)
   }, [editingConnectionId, connections])
 
   const handleDelete = useCallback(() => {
@@ -1030,7 +1230,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   return (
     <>
       {/* Targeting overlay — captures all pointer events */}
-      {(mode === 'targeting' || dragState) && (
+      {(mode === 'targeting' || dragState || marqueeState) && (
         <div
           ref={overlayRef}
           onPointerMove={handlePointerMove}
@@ -1040,13 +1240,13 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             position: 'fixed',
             inset: 0,
             zIndex: 99998,
-            cursor: dragState ? 'grabbing' : 'crosshair',
+            cursor: marqueeState ? 'crosshair' : dragState ? 'grabbing' : 'crosshair',
           }}
         />
       )}
 
       {/* Highlight box */}
-      {highlight && (mode === 'targeting' || dragState) && (
+      {highlight && (mode === 'targeting' || dragState) && !marqueeState && (
         <div
           style={{
             position: 'fixed',
@@ -1059,6 +1259,14 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             pointerEvents: 'none',
             zIndex: 99999,
           }}
+        />
+      )}
+
+      {/* Marquee selection rectangle */}
+      {marqueeState && (
+        <MarqueeRect
+          screenStart={marqueeState.screenStart}
+          screenCurrent={marqueeState.screenCurrent}
         />
       )}
 
@@ -1185,11 +1393,13 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
             {/* Header: component·tag + delete icon (when re-editing) */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: S.sm }}>
               <div style={{ fontSize: T.ui, color: N.txtSec, letterSpacing: '0.02em' }}>
-                {target.elementTag === 'connection'
-                  ? <>Combine: {((target.props as any).titles as string[] | undefined)?.join(' + ') ?? `${(target.props as any).fromTitle?.split('/').pop()} + ${(target.props as any).toTitle?.split('/').pop()}`}</>
-                  : target.frameId
-                    ? <>{target.componentName} &middot; {target.elementTag}</>
-                    : 'Canvas note'}
+                {target.elementTag === 'multi-select'
+                  ? <>Pick {target.frames?.length ?? 0} frames: {target.frames?.map(f => f.title.split('/').pop()).join(', ')}</>
+                  : target.elementTag === 'connection'
+                    ? <>Combine: {((target.props as any).titles as string[] | undefined)?.join(' + ') ?? `${(target.props as any).fromTitle?.split('/').pop()} + ${(target.props as any).toTitle?.split('/').pop()}`}</>
+                    : target.frameId
+                      ? <>{target.componentName} &middot; {target.elementTag}</>
+                      : 'Canvas note'}
               </div>
               {editingMarkerId !== null && (
                 <HoverButton
@@ -1211,11 +1421,13 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               value={comment}
               onChange={e => setComment(e.target.value)}
               placeholder={
-                target.elementTag === 'connection'
-                  ? 'How should these be combined?'
-                  : target.frameId
-                    ? 'Describe the change...'
-                    : 'Add a note...'
+                target.elementTag === 'multi-select'
+                  ? 'Why are you picking these frames? (optional)'
+                  : target.elementTag === 'connection'
+                    ? 'How should these be combined?'
+                    : target.frameId
+                      ? 'Describe the change...'
+                      : 'Add a note...'
               }
               style={{
                 width: '100%',
@@ -1233,16 +1445,19 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               }}
             />
             <DialogActions>
-              <ModeToggle
-                value={annotationMode}
-                onChange={setAnnotationMode}
-                showPick={!!target.frameId && target.elementTag !== 'connection' && target.elementTag !== 'canvas'}
-                variationCount={variationCount}
-                onVariationChange={setVariationCount}
-              />
+              {/* Multi-select defaults to pick and hides mode toggle */}
+              {target.elementTag !== 'multi-select' && (
+                <ModeToggle
+                  value={annotationMode}
+                  onChange={setAnnotationMode}
+                  showPick={!!target.frameId && target.elementTag !== 'connection' && target.elementTag !== 'canvas'}
+                  variationCount={variationCount}
+                  onVariationChange={setVariationCount}
+                />
+              )}
               <div style={{ flex: 1 }} />
               <ActionButton variant="ghost" onClick={handleCancel}>Cancel</ActionButton>
-              <ActionButton variant="primary" disabled={!comment.trim()} onClick={handleApply}>Save</ActionButton>
+              <ActionButton variant="primary" disabled={target?.elementTag !== 'multi-select' && !comment.trim()} onClick={handleApply}>Save</ActionButton>
             </DialogActions>
           </DialogCard>
         </div>

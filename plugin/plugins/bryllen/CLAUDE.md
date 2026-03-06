@@ -240,17 +240,26 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - The designer chose ideate because they WANT options to compare side-by-side
 
 **Pick mode** (CRITICAL — designer chose this direction):
-- The designer selected this frame as THE direction to move forward with
-- Store `pickedFrameId` in manifest for this iteration
+- The designer selected frame(s) as THE direction(s) to move forward with
+- **Single pick:** `frameId` contains one frame ID, store `pickedFrameId` in manifest
+- **Multi-pick:** `frameIds` contains multiple frame IDs (from marquee selection), store `pickedFrameIds` array in manifest
 - When creating the NEXT iteration after a pick:
-  1. **Rebuild components from scratch** based on the picked frame's actual rendered output
-  2. **Extract exact tokens** — colors, spacing, typography from the picked design, not the old tokens.css
-  3. **Match 1:1** — the new iteration's components must visually match the picked frame exactly
-  4. Do NOT copy old components and tweak them — recreate based on what the picked frame actually looks like
+  1. **Single pick:** Rebuild components from scratch based on the picked frame's actual rendered output
+  2. **Multi-pick:** Combine ALL picked directions — extract shared patterns, merge complementary elements, resolve conflicts thoughtfully
+  3. **Extract exact tokens** — colors, spacing, typography from the picked design(s), not the old tokens.css
+  4. **Match 1:1** — the new iteration's components must visually match the picked frame(s) exactly
+  5. Do NOT copy old components and tweak them — recreate based on what the picked frame(s) actually look like
 - The pick is a commitment: all future work builds on this exact design, not approximations
 
+**Multi-pick strategy (when `frameIds` has 2+ entries):**
+- The designer wants to combine strengths from multiple directions
+- Extract what works best from each direction (layout from A, color palette from B, interaction from C)
+- Resolve conflicts by choosing the stronger solution or creating a synthesis
+- The result should feel cohesive, not like a Frankenstein of disconnected parts
+- When in doubt, the comment field may clarify which elements to prioritize
+
 **Why this matters:**
-During ideation, multiple directions may have different component implementations. When the designer picks one, they're choosing THAT specific visual result. Copying old components and adjusting defeats the purpose — the new iteration must faithfully reproduce the picked design.
+During ideation, multiple directions may have different component implementations. When the designer picks one (or multiple), they're choosing THAT specific visual result. Copying old components and adjusting defeats the purpose — the new iteration must faithfully reproduce the picked design.
 
 **First generation always implies ideate behavior:**
 - When a designer describes a component for the first time (no existing frames)

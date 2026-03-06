@@ -671,8 +671,10 @@ export function BryllenShell({ manifests, annotationEndpoint = 'http://localhost
             >
               {/* Render component frames */}
               {frames.map(frame => {
-                const pickedFrameId = activeIteration?.pickedFrameId
-                const isFaded = pickedFrameId ? frame.id !== pickedFrameId : false
+                // Support both single pickedFrameId and array pickedFrameIds
+                const pickedFrameIds = activeIteration?.pickedFrameIds ??
+                  (activeIteration?.pickedFrameId ? [activeIteration.pickedFrameId] : [])
+                const isFaded = pickedFrameIds.length > 0 && !pickedFrameIds.includes(frame.id)
                 return (
                   <Frame
                     key={frame.id}

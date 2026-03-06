@@ -106,11 +106,14 @@ loadAnnotations()
 function addAnnotation(data) {
   const id = String(nextId++)
   const isImmediate = data.type === 'iteration' || data.type === 'project' || data.type === 'prompt-request' || data.type === 'share' || data.type === 'pick'
+  // Handle frameIds array: default to [frameId] if only single frameId provided
+  const frameIds = data.frameIds ?? (data.frameId ? [data.frameId] : [])
   const annotation = {
     id,
     type: isImmediate ? data.type : 'annotation',
     project: data.project ?? '',
     frameId: data.frameId ?? '',
+    frameIds,  // Include frameIds array for multi-select
     componentName: data.componentName ?? '',
     props: data.props ?? {},
     selector: data.selector ?? '',

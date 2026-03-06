@@ -75,6 +75,8 @@ export interface IterationManifest {
   pages: PageManifest[]
   /** ID of the picked frame in this iteration (for visual treatment) */
   pickedFrameId?: string
+  /** IDs of multiple picked frames (for multi-select) */
+  pickedFrameIds?: string[]
 }
 
 /** A project manifest — exported from src/projects/<name>/manifest.ts */
