@@ -82,7 +82,7 @@ function FormatTab({ label, active, onClick }: {
         border: 'none', cursor: 'default',
         padding: `${S.xs}px ${S.sm}px`,
         borderRadius: R.ui, cornerShape: 'squircle',
-        backgroundColor: active ? V.card : hovered ? 'rgba(0,0,0,0.03)' : 'transparent',
+        backgroundColor: active ? V.card : hovered ? V.active : 'transparent',
         fontSize: T.ui, fontWeight: active ? 600 : 400,
         fontFamily: 'SF Mono, Monaco, Inconsolata, monospace',
         color: active ? V.txtPri : V.txtSec,
@@ -413,7 +413,7 @@ export function ColorPicker({ l: initL, c: initC, h: initH, onChange, onApply, o
             onMouseLeave={() => setDiscardHover(false)}
             style={{
               width: S.xxl, height: S.xxl, border: 'none',
-              background: discardHover ? 'rgba(0,0,0,0.06)' : 'transparent',
+              background: discardHover ? V.active : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: R.ui, cornerShape: 'squircle', cursor: 'default',
             }}
@@ -429,7 +429,7 @@ export function ColorPicker({ l: initL, c: initC, h: initH, onChange, onApply, o
           onMouseLeave={() => setCancelHover(false)}
           style={{
             padding: `${S.sm}px ${S.md}px`,
-            background: cancelHover ? 'rgba(0,0,0,0.03)' : 'transparent',
+            background: cancelHover ? V.active : 'transparent',
             color: V.txtSec,
             border: `1px solid ${V.border}`, borderRadius: R.ui, cornerShape: 'squircle',
             fontSize: T.ui, fontWeight: 500, fontFamily: FONT, cursor: 'default',

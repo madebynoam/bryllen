@@ -45,7 +45,7 @@ function SidebarRow({ children, icon, active, onClick }: {
         padding: `0 ${S.sm}px`,
         margin: `0 ${S.xs}px`,
         borderRadius: R.ui, cornerShape: 'squircle',
-        backgroundColor: active ? V.active : hovered ? 'rgba(0,0,0,0.03)' : 'transparent',
+        backgroundColor: active ? V.active : hovered ? V.chrome : 'transparent',
         fontFamily: FONT, textAlign: 'left',
         fontSize: T.ui,
         fontWeight: 400,

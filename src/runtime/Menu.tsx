@@ -164,11 +164,11 @@ export function MenuRow({
   const [hovered, setHovered] = useState(false)
 
   const bg = active
-    ? 'rgba(0, 0, 0, 0.06)'
+    ? V.active
     : destructive && hovered
       ? 'oklch(0.96 0.04 28)'
       : hovered
-        ? 'rgba(0, 0, 0, 0.03)'
+        ? V.active
         : 'transparent'
 
   const color = destructive
@@ -346,7 +346,7 @@ export function ActionButton({ variant, disabled, onClick, children }: ActionBut
   const isPrimary = variant === 'primary'
   const bg = isPrimary
     ? (disabled ? A.muted : hovered ? A.hover : A.accent)
-    : (hovered ? 'rgba(0, 0, 0, 0.03)' : 'transparent')
+    : (hovered ? V.active : 'transparent')
   const color = isPrimary
     ? (disabled ? V.txtSec : D.text)
     : V.txtSec

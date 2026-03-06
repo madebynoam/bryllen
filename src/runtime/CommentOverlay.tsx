@@ -107,7 +107,7 @@ function HoverButton({ children, onClick, title, style }: {
       style={{
         width: 24, height: 24, borderRadius: R.ui, cornerShape: 'squircle', border: 'none',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: hovered ? 'rgba(0,0,0,0.06)' : 'transparent',
+        backgroundColor: hovered ? V.active : 'transparent',
         cursor: 'default', fontFamily: FONT,
         color: V.txtSec,
         ...style,
@@ -182,7 +182,7 @@ function ThreadMessage({ message, menuItems, onReact }: {
       style={{
         display: 'flex', gap: S.sm, alignItems: 'flex-start',
         padding: S.xs, margin: -S.xs, borderRadius: R.ui, cornerShape: 'squircle',
-        backgroundColor: hovered ? 'rgba(0,0,0,0.02)' : 'transparent',
+        backgroundColor: hovered ? V.active : 'transparent',
       }}
     >
       <Avatar name={message.author.login} size={28} />

@@ -1463,7 +1463,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               {editingMarkerId !== null && (
                 <HoverButton
                   onClick={handleDelete}
-                  hoverBg="rgba(0,0,0,0.06)"
+                  hoverBg={V.active}
                   title="Delete annotation"
                   baseStyle={{
                     width: S.xxl, height: S.xxl, border: 'none', background: 'transparent',
