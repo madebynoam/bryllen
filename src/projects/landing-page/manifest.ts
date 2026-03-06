@@ -73,6 +73,9 @@ import { Tract as Tract8 } from './v8/pages/tract'
 import { Axis as Axis8 } from './v8/pages/axis'
 import { Void as Void8 } from './v8/pages/void_'
 import { Codex as Codex8 } from './v8/pages/codex'
+import { CodexReference } from './v8/pages/codex-reference'
+import { CodexTerminal } from './v8/pages/codex-terminal'
+import { CodexGallery } from './v8/pages/codex-gallery'
 import { Gauge as Gauge8 } from './v8/pages/gauge'
 import { Plank as Plank8 } from './v8/pages/plank'
 import { Verso as Verso8 } from './v8/pages/verso'
@@ -658,6 +661,16 @@ const manifest: ProjectManifest = {
             { id: 'v8-module', title: 'Module — Brockmann 6-Column', component: Module8, width: 1440, height: 2400 },
             { id: 'v8-proof', title: 'Proof — Typography as Design', component: Proof8, width: 1440, height: 2400 },
             { id: 'v8-cipher', title: 'Cipher — Terminal Aesthetic', component: Cipher8, width: 1440, height: 2400 },
+          ],
+        },
+        {
+          name: 'Codex Variations',
+          grid: { columns: 4, columnWidth: 1440, rowHeight: 3200, gap: 40 },
+          frames: [
+            { id: 'v8-codex-original', title: 'Codex — Original (Updated)', component: Codex8, width: 1440, height: 3200 },
+            { id: 'v8-codex-reference', title: 'Codex Reference — Refined Swiss Book', component: CodexReference, width: 1440, height: 3200 },
+            { id: 'v8-codex-terminal', title: 'Codex Terminal — Dark Developer CLI', component: CodexTerminal, width: 1440, height: 3200 },
+            { id: 'v8-codex-gallery', title: 'Codex Gallery — Museum Whitespace', component: CodexGallery, width: 1440, height: 3200 },
           ],
         },
       ],

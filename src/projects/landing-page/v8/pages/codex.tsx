@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import canvasWide from '../../screenshots/canvas-wide.png'
-import productDirections from '../../screenshots/product-directions.png'
+import canvasRams from '../../screenshots/canvas-rams-grid.png'
+import canvasOriginals from '../../screenshots/canvas-originals.png'
 
 // ── Codex — Table of contents / Book layout ───────────────────────────────
 // The page reads like a book's TOC. Numbered chapters with dot leaders.
@@ -61,8 +61,8 @@ export function Codex() {
         padding: '20px 64px', maxWidth: 1200, margin: '0 auto',
         width: '100%', boxSizing: 'border-box',
       }}>
-        <span style={{ fontFamily: font, fontSize: 15, fontWeight: 500, color: C.text }}>canvai</span>
-        <span style={{ fontFamily: mono, fontSize: 11, color: C.textTer }}>v1.0 — Reference</span>
+        <span style={{ fontFamily: font, fontSize: 15, fontWeight: 500, color: C.text }}>bryllen</span>
+        <span style={{ fontFamily: mono, fontSize: 11, color: C.textTer }}>design canvas</span>
       </nav>
 
       {/* Title page */}
@@ -123,7 +123,7 @@ export function Codex() {
           transform: h1 ? 'translateY(-2px)' : 'translateY(0)',
           transition: `transform 0.3s ${spring}`,
         }}>
-          <img src={canvasWide} alt="Bryllen canvas" style={{ width: '100%', display: 'block' }} />
+          <img src={canvasRams} alt="Bryllen canvas with multiple designs" style={{ width: '100%', display: 'block' }} />
         </div>
       </section>
 
@@ -166,7 +166,7 @@ export function Codex() {
           transform: h2 ? 'translateY(-2px)' : 'translateY(0)',
           transition: `transform 0.3s ${spring}`,
         }}>
-          <img src={productDirections} alt="Design directions" style={{ width: '100%', display: 'block' }} />
+          <img src={canvasOriginals} alt="Design directions" style={{ width: '100%', display: 'block' }} />
         </div>
       </section>
 
@@ -176,7 +176,7 @@ export function Codex() {
         padding: '20px 64px', maxWidth: 1200, margin: '0 auto',
         width: '100%', boxSizing: 'border-box', borderTop: `1px solid ${C.border}`,
       }}>
-        <span style={{ fontFamily: font, fontSize: 13, fontWeight: 400, color: C.textTer }}>canvai</span>
+        <span style={{ fontFamily: font, fontSize: 13, fontWeight: 400, color: C.textTer }}>bryllen</span>
         <span style={{ fontFamily: mono, fontSize: 11, color: C.textTer }}>End of codex</span>
       </footer>
     </div>
