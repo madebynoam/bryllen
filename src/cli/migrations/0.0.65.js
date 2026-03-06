@@ -9,17 +9,19 @@ export const version = '0.0.65'
 
 export const description = 'Rename canvai imports to bryllen (CanvaiShell → BryllenShell)'
 
-export const files = ['src/App.tsx', 'vite.config.ts']
+export const files = ['src/App.tsx', 'vite.config.ts', 'index.html']
 
 export function applies(fileContents) {
   const app = fileContents['src/App.tsx']
   const viteConfig = fileContents['vite.config.ts']
+  const indexHtml = fileContents['index.html']
 
   // Check for any canvai references
   if (app?.includes('canvai/runtime')) return true
   if (app?.includes('virtual:canvai-manifests')) return true
   if (app?.includes('CanvaiShell')) return true
   if (viteConfig?.includes('canvai/vite-plugin')) return true
+  if (indexHtml?.includes('<title>Canvai</title>')) return true
 
   return false
 }
@@ -44,6 +46,13 @@ export function migrate(fileContents) {
   if (viteConfig) {
     viteConfig = viteConfig.replace(/canvai\/vite-plugin/g, 'bryllen/vite-plugin')
     result['vite.config.ts'] = viteConfig
+  }
+
+  // Migrate index.html title
+  let indexHtml = fileContents['index.html']
+  if (indexHtml) {
+    indexHtml = indexHtml.replace(/<title>Canvai<\/title>/g, '<title>Bryllen</title>')
+    result['index.html'] = indexHtml
   }
 
   return result
