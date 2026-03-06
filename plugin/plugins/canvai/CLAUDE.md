@@ -102,9 +102,9 @@ Once chosen, generate all meaningful **variations × states** as frames. Columns
 - Proper color and typography choices
 - Correct horizontal frame layout with no overlaps
 
-## Frame layout (HORIZONTAL, not vertical)
+## Frame layout (HORIZONTAL, not vertical) — MANDATORY
 
-**Always lay out frames horizontally.** Side-by-side comparison is Canvai's core value.
+**ALWAYS lay out frames HORIZONTALLY (increasing X, same Y).** Side-by-side comparison is Canvai's core value. Vertical stacking defeats the entire purpose.
 
 ### Standard widths
 - Desktop: `1440px`
@@ -112,19 +112,35 @@ Once chosen, generate all meaningful **variations × states** as frames. Columns
 - Mobile: `390px`
 - Gap: `40px`
 
-### Calculate X positions
+### Calculate X positions (Y stays constant)
 ```
-Frame 1: x = 0
-Frame 2: x = Frame1.width + 40
-Frame 3: x = Frame2.x + Frame2.width + 40
-```
-
-### Example: 5 desktop frames
-```
-x=0, x=1480, x=2960, x=4440, x=5920 (all width=1440)
+Frame 1: x = 0,    y = 0
+Frame 2: x = 1480, y = 0  (previous x + width + gap)
+Frame 3: x = 2960, y = 0
+Frame 4: x = 4440, y = 0
+Frame 5: x = 5920, y = 0
 ```
 
-**Never stack frames vertically unless explicitly requested.**
+### Manifest example (CORRECT)
+```ts
+frames: [
+  { id: 'dir-a', component: DirA, x: 0,    y: 0, width: 1440, height: 900 },
+  { id: 'dir-b', component: DirB, x: 1480, y: 0, width: 1440, height: 900 },
+  { id: 'dir-c', component: DirC, x: 2960, y: 0, width: 1440, height: 900 },
+]
+```
+
+### WRONG (vertical stacking)
+```ts
+// DO NOT DO THIS:
+frames: [
+  { id: 'dir-a', x: 0, y: 0,   ... },
+  { id: 'dir-b', x: 0, y: 940, ... },  // WRONG: same X, different Y
+  { id: 'dir-c', x: 0, y: 1880, ... }, // WRONG: vertical stack
+]
+```
+
+**If you generate frames with the same X and increasing Y, you have failed.**
 
 ## Mandatory pages
 

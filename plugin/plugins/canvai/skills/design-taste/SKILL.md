@@ -88,41 +88,32 @@ Never default to flat solid colors. Create depth:
 - **Match intensity to aesthetic**: Maximalist = elaborate, Minimal = subtle
 - **Spring physics** for position/scale, CSS transitions for color
 
-## 8. Frame Layout (Critical)
+## 8. Frame Layout (MANDATORY — horizontal only)
 
-**Frames must be laid out HORIZONTALLY, not vertically.**
+**Frames MUST be laid out HORIZONTALLY (increasing X, constant Y).**
 
-### Width Calculation
-- Desktop frames: `1440px` wide
-- Tablet frames: `768px` wide
-- Mobile frames: `390px` wide
-- Gap between frames: `40px`
+### Widths and Gap
+- Desktop: `1440px`, Tablet: `768px`, Mobile: `390px`
+- Gap: `40px`
 
-### Horizontal Layout Formula
-```
-Frame 1: x = 0
-Frame 2: x = Frame1.width + 40
-Frame 3: x = Frame2.x + Frame2.width + 40
-...
-```
-
-### Example: 5 Desktop Frames
-```
-Frame 1: x=0,     width=1440
-Frame 2: x=1480,  width=1440
-Frame 3: x=2960,  width=1440
-Frame 4: x=4440,  width=1440
-Frame 5: x=5920,  width=1440
+### Correct Layout (all Y = 0)
+```ts
+frames: [
+  { id: 'a', x: 0,    y: 0, width: 1440, height: 900 },
+  { id: 'b', x: 1480, y: 0, width: 1440, height: 900 },
+  { id: 'c', x: 2960, y: 0, width: 1440, height: 900 },
+  { id: 'd', x: 4440, y: 0, width: 1440, height: 900 },
+  { id: 'e', x: 5920, y: 0, width: 1440, height: 900 },
+]
 ```
 
-### Example: Mixed Widths (Desktop + 2 Mobile)
-```
-Desktop:  x=0,    width=1440
-Mobile 1: x=1480, width=390
-Mobile 2: x=1910, width=390
+### WRONG (vertical — DO NOT DO)
+```ts
+// FAIL: same X, increasing Y = vertical stack
+{ x: 0, y: 0 }, { x: 0, y: 940 }, { x: 0, y: 1880 }
 ```
 
-**Never stack frames vertically unless explicitly requested.** Horizontal layout enables side-by-side comparison, which is the core value of Canvai.
+**If your frames have the same X and different Y values, you have failed.** Horizontal side-by-side comparison is Canvai's core value.
 
 ## 9. Variation Mandate
 

@@ -1,2 +1,2 @@
 // This version is updated by scripts/bump-version.sh
-export const VERSION = '0.0.58'
+export const VERSION = '0.0.59'
