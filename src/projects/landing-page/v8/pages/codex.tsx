@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import canvasExpressive from '../../screenshots/v6-expressive-canvas.png'
-import canvasDirections from '../../screenshots/canvas-v3-directions.png'
+import canvasLatest from '../../screenshots/canvas-latest.png'
+import canvasOriginals from '../../screenshots/canvas-originals.png'
 
 // ── Codex — Table of contents / Book layout ───────────────────────────────
 // The page reads like a book's TOC. Numbered chapters with dot leaders.
@@ -123,7 +123,7 @@ export function Codex() {
           transform: h1 ? 'translateY(-2px)' : 'translateY(0)',
           transition: `transform 0.3s ${spring}`,
         }}>
-          <img src={canvasExpressive} alt="Bryllen canvas with multiple designs" style={{ width: '100%', display: 'block' }} />
+          <img src={canvasLatest} alt="Bryllen canvas with multiple designs" style={{ width: '100%', display: 'block' }} />
         </div>
       </section>
 
@@ -166,7 +166,7 @@ export function Codex() {
           transform: h2 ? 'translateY(-2px)' : 'translateY(0)',
           transition: `transform 0.3s ${spring}`,
         }}>
-          <img src={canvasDirections} alt="Design directions" style={{ width: '100%', display: 'block' }} />
+          <img src={canvasOriginals} alt="Design directions" style={{ width: '100%', display: 'block' }} />
         </div>
       </section>
 
