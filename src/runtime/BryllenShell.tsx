@@ -227,6 +227,7 @@ export function BryllenShell({ manifests, annotationEndpoint = 'http://localhost
   const [iterDialogOpen, setIterDialogOpen] = useState(false)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   // Images stored per-page: { "pageName": CanvasImageFrame[] }
   const [pageImages, setPageImages] = useState<Record<string, CanvasImageFrame[]>>({})
   const [showTour, setShowTour] = useState(() => !isTourCompleted())
@@ -388,20 +389,27 @@ export function BryllenShell({ manifests, annotationEndpoint = 'http://localhost
           }
         } else if (data.type === 'navigate' && data.iteration) {
           // Navigate to a specific iteration (e.g., after creating a new one)
-          const iterations = activeProject?.iterations ?? []
-          const targetIdx = iterations.findIndex(it =>
-            it.name.toLowerCase() === data.iteration.toLowerCase()
-          )
-          if (targetIdx >= 0) {
-            setActiveIterationIndex(targetIdx)
-            // Navigate to first page of that iteration
-            setActivePageIndex(0)
-          }
+          // Store as pending — HMR may not have loaded the new iteration yet
+          setPendingNavigation(data.iteration)
         }
       } catch { /* ignore parse errors */ }
     }
     return () => source.close()
-  }, [annotationEndpoint, activeProject?.iterations, setActiveIterationIndex, setActivePageIndex])
+  }, [annotationEndpoint])
+
+  // Handle pending navigation once HMR loads the new iteration
+  useEffect(() => {
+    if (!pendingNavigation) return
+    const iterations = activeProject?.iterations ?? []
+    const targetIdx = iterations.findIndex(it =>
+      it.name.toLowerCase() === pendingNavigation.toLowerCase()
+    )
+    if (targetIdx >= 0) {
+      setActiveIterationIndex(targetIdx)
+      setActivePageIndex(0)
+      setPendingNavigation(null)
+    }
+  }, [pendingNavigation, activeProject?.iterations, setActiveIterationIndex, setActivePageIndex])
 
   const activeIteration = activeProject?.iterations?.[activeIterationIndex]
   const iterClass = activeIteration ? `iter-${activeIteration.name.toLowerCase()}` : ''

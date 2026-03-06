@@ -99,9 +99,9 @@ All directions on a single "All Directions" manifest page. Use `DirectionLabel` 
 
 Once chosen, generate all meaningful **variations × states** as frames. Columns = states, Rows = variations. Frame IDs: `<component>-<variation>-<state>`.
 
-## Frame layout (HORIZONTAL, not vertical) — MANDATORY
+## Frame layout (HORIZONTAL grid) — MANDATORY
 
-**ALWAYS lay out frames HORIZONTALLY (increasing X, same Y).** Side-by-side comparison is Bryllen's core value. Vertical stacking defeats the entire purpose.
+Frames are auto-positioned using a **grid layout**. The `grid.columns` setting controls how many frames fit horizontally before wrapping. **Set columns >= number of frames for horizontal layout.**
 
 ### Standard widths
 - Desktop: `1440px`
@@ -109,35 +109,46 @@ Once chosen, generate all meaningful **variations × states** as frames. Columns
 - Mobile: `390px`
 - Gap: `40px`
 
-### Calculate X positions (Y stays constant)
-```
-Frame 1: x = 0,    y = 0
-Frame 2: x = 1480, y = 0  (previous x + width + gap)
-Frame 3: x = 2960, y = 0
-Frame 4: x = 4440, y = 0
-Frame 5: x = 5920, y = 0
-```
-
-### Manifest example (CORRECT)
+### Grid config (controls layout)
 ```ts
-frames: [
-  { id: 'dir-a', component: DirA, x: 0,    y: 0, width: 1440, height: 900 },
-  { id: 'dir-b', component: DirB, x: 1480, y: 0, width: 1440, height: 900 },
-  { id: 'dir-c', component: DirC, x: 2960, y: 0, width: 1440, height: 900 },
-]
+{
+  name: 'All Directions',
+  grid: {
+    columns: 5,        // ← Frames per row (set this >= frame count for horizontal)
+    columnWidth: 1440, // ← Frame width
+    rowHeight: 900,    // ← Frame height (auto-expands to content)
+    gap: 40,           // ← Spacing between frames
+  },
+  frames: [...]
+}
 ```
 
-### WRONG (vertical stacking)
+### Manifest example (CORRECT — 3 frames, 3+ columns = horizontal)
 ```ts
-// DO NOT DO THIS:
-frames: [
-  { id: 'dir-a', x: 0, y: 0,   ... },
-  { id: 'dir-b', x: 0, y: 940, ... },  // WRONG: same X, different Y
-  { id: 'dir-c', x: 0, y: 1880, ... }, // WRONG: vertical stack
-]
+{
+  name: 'All Directions',
+  grid: { columns: 3, columnWidth: 1440, rowHeight: 900, gap: 40 },
+  frames: [
+    { id: 'dir-a', title: 'Direction A', component: DirA, width: 1440, height: 900 },
+    { id: 'dir-b', title: 'Direction B', component: DirB, width: 1440, height: 900 },
+    { id: 'dir-c', title: 'Direction C', component: DirC, width: 1440, height: 900 },
+  ],
+}
 ```
 
-**If you generate frames with the same X and increasing Y, you have failed.**
+### WRONG (default columns: 4, but frames too wide = vertical wrap)
+```ts
+// DO NOT DO THIS — missing grid config means default columnWidth: 320
+{
+  name: 'All Directions',
+  frames: [
+    { id: 'dir-a', component: DirA, width: 1440 },  // Too wide for default grid
+    { id: 'dir-b', component: DirB, width: 1440 },  // Wraps to next row
+  ],
+}
+```
+
+**CRITICAL:** Frames do NOT have x,y coordinates. Position is computed from `grid.columns`. Always set `grid.columns >= frame count` for horizontal layout.
 
 ## Mandatory pages
 
