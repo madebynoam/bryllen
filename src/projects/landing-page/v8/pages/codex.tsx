@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import canvasRams from '../../screenshots/canvas-rams-grid.png'
-import canvasOriginals from '../../screenshots/canvas-originals.png'
+import canvasExpressive from '../../screenshots/v6-expressive-canvas.png'
+import canvasDirections from '../../screenshots/canvas-v3-directions.png'
 
 // ── Codex — Table of contents / Book layout ───────────────────────────────
 // The page reads like a book's TOC. Numbered chapters with dot leaders.
@@ -47,7 +47,7 @@ export function Codex() {
 
   const chapters = [
     { num: '01', title: 'The Canvas', page: '—' },
-    { num: '02', title: 'Five Directions', page: '—' },
+    { num: '02', title: 'Multiple Directions', page: '—' },
     { num: '03', title: 'Annotate Directly', page: '—' },
     { num: '04', title: 'Version History', page: '—' },
     { num: '05', title: 'Production Code', page: '—' },
@@ -80,7 +80,7 @@ export function Codex() {
           fontFamily: font, fontSize: 17, fontWeight: 400, color: C.textSec,
           marginTop: 20, marginBottom: 36, lineHeight: 1.65, textWrap: 'pretty', maxWidth: 480,
         }}>
-          Claude Code generates real React components on an infinite canvas. Describe what you need, compare directions side by side, ship the best one.
+          Like Figma, but AI does the work. Describe what you want, see multiple directions at once, click to refine. No code required.
         </p>
         <button {...bhB} {...baB} style={{
           border: 'none', cursor: 'default', fontFamily: font, fontWeight: 500,
@@ -123,17 +123,17 @@ export function Codex() {
           transform: h1 ? 'translateY(-2px)' : 'translateY(0)',
           transition: `transform 0.3s ${spring}`,
         }}>
-          <img src={canvasRams} alt="Bryllen canvas with multiple designs" style={{ width: '100%', display: 'block' }} />
+          <img src={canvasExpressive} alt="Bryllen canvas with multiple designs" style={{ width: '100%', display: 'block' }} />
         </div>
       </section>
 
       {/* Chapter sections */}
       {[
-        { num: '01', title: 'The Canvas', body: 'An infinite, zoomable surface where every generation lives as a frame. No tabs. No chat history. Everything visible at once — the comparison surface that changes how you design.' },
-        { num: '02', title: 'Five Directions', body: 'One prompt generates five complete layouts. Not variations — directions. Each one is a different structural approach to your description. Compare them side by side and pick the one that\'s right.' },
-        { num: '03', title: 'Annotate Directly', body: 'Click anywhere on any frame. Describe what you want changed in plain language. The code updates while you watch. No separate feedback tool, no export-annotate-reimport cycle.' },
-        { num: '04', title: 'Version History', body: 'Every iteration is frozen and preserved. Go back to yesterday\'s direction. Branch from any point. Your creative history stays intact — nothing is ever overwritten or lost.' },
-        { num: '05', title: 'Production Code', body: 'Every frame is working React. Not a mockup, not a screenshot, not a prototype. Ship what you designed. The canvas produces the artifact, not a picture of one.' },
+        { num: '01', title: 'The Canvas', body: 'An infinite, zoomable surface like Figma. Every design lives as a frame you can see and compare. No chat windows. No tabs. Everything visible at once.' },
+        { num: '02', title: 'Multiple Directions', body: 'One description generates multiple complete layouts. Not tweaks — genuinely different approaches. Compare them side by side, pick the one that feels right.' },
+        { num: '03', title: 'Annotate Directly', body: 'Click anywhere on any frame. Type what you want changed in plain English. Watch it update. Like commenting in Figma, but the changes happen automatically.' },
+        { num: '04', title: 'Version History', body: 'Every version is saved automatically. Go back to any previous iteration. Branch in new directions. Like version history in Figma, but for AI generations.' },
+        { num: '05', title: 'Production Code', body: 'Every frame is real, working code. Not a mockup. Hand it to your developer and it runs. No redlines, no specs, no handoff friction.' },
       ].map((ch) => (
         <section key={ch.num} style={{
           padding: '40px 64px', maxWidth: 1200, margin: '0 auto', boxSizing: 'border-box',
@@ -166,7 +166,7 @@ export function Codex() {
           transform: h2 ? 'translateY(-2px)' : 'translateY(0)',
           transition: `transform 0.3s ${spring}`,
         }}>
-          <img src={canvasOriginals} alt="Design directions" style={{ width: '100%', display: 'block' }} />
+          <img src={canvasDirections} alt="Design directions" style={{ width: '100%', display: 'block' }} />
         </div>
       </section>
 
