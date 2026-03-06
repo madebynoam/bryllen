@@ -36,13 +36,19 @@ Create a new design project inside Bryllen and launch the dev environment.
 
    If `npm install` fails, stop immediately and tell the user what went wrong. Do not proceed to step 5.
 
-5. **Scaffold the project.** Run:
+5. **Detect which package name is installed** (bryllen or legacy canvai):
    ```bash
-   npx bryllen new
+   node -e "console.log(require('fs').existsSync('node_modules/bryllen') ? 'bryllen' : 'canvai')"
+   ```
+   Store the result — use this package name for all `npx` commands below.
+
+6. **Scaffold the project.** Run:
+   ```bash
+   npx <package-name> new
    ```
    This creates `index.html`, `vite.config.ts`, `src/App.tsx`, `src/main.tsx`, `CLAUDE.md` (project rules), `.claude/settings.json` (frozen guard hook), tsconfigs, and installs peer dependencies. Files that already exist are skipped.
 
-6. **Create the project folder structure:**
+7. **Create the project folder structure:**
    ```
    src/projects/<project-name>/
      v1/
@@ -55,28 +61,28 @@ Create a new design project inside Bryllen and launch the dev environment.
      CHANGELOG.md
    ```
 
-7. **Initial commit:** Create a git commit with the scaffolded project:
+8. **Initial commit:** Create a git commit with the scaffolded project:
    ```bash
    git add . && git commit -m 'feat: init <project-name> project'
    ```
    This captures the scaffold. A second commit will follow after the design is generated in the 'What happens next' sequence.
 
-8. **Launch the dev server:**
+9. **Launch the dev server:**
    ```bash
-   npx bryllen design
+   npx <package-name> design
    ```
    This starts both Vite and the annotation HTTP server in one command.
 
-9. **Confirm:** Tell the designer the canvas is ready:
+10. **Confirm:** Tell the designer the canvas is ready:
    > "Project `<project-name>` is live at http://localhost:5173"
 
-10. **Continue immediately** with the **What happens next** sequence below to generate the initial design. After generating, **enter watch mode automatically** so the designer can annotate without running any commands.
+11. **Continue immediately** with the **What happens next** sequence below to generate the initial design. After generating, **enter watch mode automatically** so the designer can annotate without running any commands.
 
 ## What happens next
 
 After init, the designer describes what they want. The agent follows this exact sequence — **order matters**:
 
-0. **Check for context images** — Run `npx bryllen context --project <name> --iteration v1` to see if the designer pasted any inspiration images. If present, read them via the Read tool and analyze via Vision. Incorporate their style into the design directions.
+0. **Check for context images** — Run `npx <package-name> context --project <name> --iteration v1` to see if the designer pasted any inspiration images. If present, read them via the Read tool and analyze via Vision. Incorporate their style into the design directions.
 
 1. **GENERATE 3-5 DESIGN DIRECTIONS (MANDATORY)** — This is the whole point of Bryllen. Before writing any code:
    - Brainstorm 3-5 **genuinely different** design approaches
@@ -105,7 +111,7 @@ After init, the designer describes what they want. The agent follows this exact 
 
 7. **The canvas auto-discovers the manifest** and renders all frames — designer sees all directions at once
 
-8. **Enter watch mode** — run `npx bryllen watch` to start listening for designer annotations. This is critical — the designer should be able to click and annotate immediately without running any commands.
+8. **Enter watch mode** — run `npx <package-name> watch` to start listening for designer annotations. This is critical — the designer should be able to click and annotate immediately without running any commands.
 
 The full token system, design language, component hierarchy, and guard protocol are defined in CLAUDE.md — those rules apply to every file the agent creates.
 
