@@ -97,8 +97,8 @@ function ModeChip({ option, active, onClick }: {
           cursor: 'default',
           borderRadius: R.ui,
           background: active
-            ? (isPick ? pickActiveColor : 'oklch(0.92 0.005 250)')
-            : hovered ? 'oklch(0.96 0.003 250)' : 'transparent',
+            ? (isPick ? pickActiveColor : V.active)
+            : hovered ? V.chrome : 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -160,7 +160,7 @@ function VariationStepper({ count, onChange }: { count: number; onChange: (n: nu
           display: 'flex',
           alignItems: 'center',
           gap: 2,
-          background: 'oklch(0.94 0.003 250)',
+          background: V.active,
           borderRadius: R.ui,
           padding: 2,
         }}
@@ -172,7 +172,7 @@ function VariationStepper({ count, onChange }: { count: number; onChange: (n: nu
             height: 22,
             border: 'none',
             borderRadius: R.ui,
-            background: count <= 1 ? 'transparent' : 'oklch(0.97 0.003 250)',
+            background: count <= 1 ? 'transparent' : V.card,
             color: count <= 1 ? V.txtTer : V.txtSec,
             display: 'flex',
             alignItems: 'center',
@@ -200,7 +200,7 @@ function VariationStepper({ count, onChange }: { count: number; onChange: (n: nu
             height: 22,
             border: 'none',
             borderRadius: R.ui,
-            background: count >= 10 ? 'transparent' : 'oklch(0.97 0.003 250)',
+            background: count >= 10 ? 'transparent' : V.card,
             color: count >= 10 ? V.txtTer : V.txtSec,
             display: 'flex',
             alignItems: 'center',
@@ -251,7 +251,7 @@ function ModeToggle({ value, onChange, showPick = true, variationCount, onVariat
       <div style={{
         display: 'flex',
         gap: 2,
-        background: 'oklch(0.97 0.003 250)',
+        background: V.card,
         borderRadius: R.ui,
         padding: 2,
       }}>

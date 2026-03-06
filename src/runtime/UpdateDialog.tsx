@@ -124,7 +124,7 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
           textWrap: 'pretty',
         }}>
           Then restart Claude Code and run <code style={{
-            background: 'oklch(0.95 0.003 250)',
+            background: V.active,
             padding: '1px 4px',
             borderRadius: 3,
             fontSize: 11,

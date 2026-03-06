@@ -39,7 +39,7 @@ export const E = {
   insetTop: 1,
   inset:  12,
   radius: 0,   // no rounding on large surfaces
-  shadow: `0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px ${oklch(0.905, 0.003, 240)}`,
+  shadow: `0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px var(--bryllen-border)`,
 }
 
 /* Functional */
