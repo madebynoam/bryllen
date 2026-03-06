@@ -920,7 +920,9 @@ const httpServer = createServer(async (req, res) => {
         return
       }
 
-      const positionsFile = join(STORE_DIR, 'frame-positions', project, `${page}.json`)
+      // Sanitize page name: replace slashes with double-underscore to match save
+      const safePage = page.replace(/\//g, '__')
+      const positionsFile = join(STORE_DIR, 'frame-positions', project, `${safePage}.json`)
       if (!existsSync(positionsFile)) {
         sendJson(res, 200, { positions: null })
         return
@@ -945,12 +947,14 @@ const httpServer = createServer(async (req, res) => {
         return
       }
 
+      // Sanitize page name: replace slashes with double-underscore to avoid nested paths
+      const safePage = page.replace(/\//g, '__')
       const positionsDir = join(STORE_DIR, 'frame-positions', project)
       if (!existsSync(positionsDir)) {
         mkdirSync(positionsDir, { recursive: true })
       }
 
-      const positionsFile = join(positionsDir, `${page}.json`)
+      const positionsFile = join(positionsDir, `${safePage}.json`)
       writeFileSync(positionsFile, JSON.stringify(positions, null, 2))
       sendJson(res, 200, { saved: true })
       return
