@@ -258,13 +258,19 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - The designer selected frame(s) as THE direction(s) to move forward with
 - **Single pick:** `frameId` contains one frame ID, store `pickedFrameId` in manifest
 - **Multi-pick:** `frameIds` contains multiple frame IDs (from marquee selection), store `pickedFrameIds` array in manifest
+
+**MANDATORY: Read the picked frame's code:**
+1. `frameId` maps to a component — find it in the manifest's frames array
+2. Read the component file (in `v<N>/components/` or `v<N>/pages/`)
+3. The code IS the design — understand every element it renders
+
 - When creating the NEXT iteration after a pick:
-  1. **Single pick:** Rebuild components from scratch based on the picked frame's actual rendered output
-  2. **Multi-pick:** Combine ALL picked directions — extract shared patterns, merge complementary elements, resolve conflicts thoughtfully
-  3. **Extract exact tokens** — colors, spacing, typography from the picked design(s), not the old tokens.css
-  4. **Match 1:1** — the new iteration's components must visually match the picked frame(s) exactly
-  5. Do NOT copy old components and tweak them — recreate based on what the picked frame(s) actually look like
-- The pick is a commitment: all future work builds on this exact design, not approximations
+  1. **READ THE COMPONENT CODE** for the picked frame(s)
+  2. **Identify ALL elements** in the code: every div, card, button, text, icon
+  3. **Extract exact tokens** — copy the colors, spacing, typography values from the code
+  4. **Build components for EVERY element** — not just one piece. If there's a sidebar, header, cards, stats — build them ALL
+  5. **Match 1:1** — the new iteration must render identically to the picked frame
+- The pick is a commitment: all future work builds on this exact design
 
 **Multi-pick strategy (when `frameIds` has 2+ entries):**
 - The designer wants to combine strengths from multiple directions

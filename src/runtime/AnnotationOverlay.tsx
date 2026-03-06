@@ -1003,7 +1003,11 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
         // For component frames, try to get the clicked element for selector
         const contentEl = frameEl?.querySelector('[data-frame-content]') ?? frameEl
+        // Disable overlay to hit-test the actual element beneath
+        const overlay = overlayRef.current
+        if (overlay) overlay.style.pointerEvents = 'none'
         const clickedEl = document.elementFromPoint(dragState.startPoint.x, dragState.startPoint.y)
+        if (overlay) overlay.style.pointerEvents = 'auto'
         const targetEl = clickedEl?.closest('[data-frame-id]') === frameEl ? clickedEl : contentEl
         const selector = contentEl && targetEl ? buildSelector(targetEl as Element, contentEl as Element) : ''
 
