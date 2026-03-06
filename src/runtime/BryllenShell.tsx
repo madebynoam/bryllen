@@ -625,14 +625,29 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   const prevThemeRef = useRef(currentTheme)
   useEffect(() => {
     if (prevThemeRef.current === currentTheme) return
-    const wasLight = prevThemeRef.current === 'light'
-    const fromPresets = wasLight ? lightPresets : darkPresets
-    const toPresets = wasLight ? darkPresets : lightPresets
-    const idx = fromPresets.findIndex(p => p.value === canvasBg)
-    if (idx !== -1 && toPresets[idx]) {
-      setCanvasBg(toPresets[idx].value)
-    }
     prevThemeRef.current = currentTheme
+
+    // Parse lightness from current canvasBg (oklch(L C H) format)
+    const match = canvasBg.match(/oklch\(\s*([\d.]+)/)
+    if (!match) return
+    const lightness = parseFloat(match[1])
+
+    // Determine which preset index is closest in the OLD theme
+    const fromPresets = currentTheme === 'dark' ? lightPresets : darkPresets
+    const toPresets = currentTheme === 'dark' ? darkPresets : lightPresets
+
+    let closestIdx = 0
+    let closestDist = Infinity
+    for (let i = 0; i < fromPresets.length; i++) {
+      const presetL = parseFloat(fromPresets[i].value.match(/oklch\(\s*([\d.]+)/)?.[1] ?? '0')
+      const dist = Math.abs(presetL - lightness)
+      if (dist < closestDist) {
+        closestDist = dist
+        closestIdx = i
+      }
+    }
+
+    setCanvasBg(toPresets[closestIdx].value)
   }, [currentTheme, canvasBg])
 
   // Empty state — no projects yet
