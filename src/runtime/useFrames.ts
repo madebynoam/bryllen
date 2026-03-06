@@ -4,6 +4,7 @@ import { relayoutFrames } from './layout'
 
 const FRAME_GAP = 40
 const STORAGE_KEY = 'bryllen:pos:'
+const STORAGE_KEY_LEGACY = 'canvai:pos:'
 
 function frameIdsKey(frames: CanvasFrame[]): string {
   return frames.map(f => f.id).join(',')
@@ -11,7 +12,8 @@ function frameIdsKey(frames: CanvasFrame[]): string {
 
 function loadPositions(key: string): Record<string, { x: number; y: number }> | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY + key)
+    // Try new key first, fall back to legacy canvai key
+    const raw = localStorage.getItem(STORAGE_KEY + key) || localStorage.getItem(STORAGE_KEY_LEGACY + key)
     if (raw) return JSON.parse(raw)
   } catch {}
   return null

@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, useCallback, createContext, useContext, us
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5
 const VP_KEY = 'bryllen:vp:'
+const VP_KEY_LEGACY = 'canvai:vp:'
 
 function saveViewport(key: string, x: number, y: number, zoom: number) {
   try { localStorage.setItem(VP_KEY + key, JSON.stringify({ x, y, zoom })) } catch {}
@@ -10,19 +11,23 @@ function saveViewport(key: string, x: number, y: number, zoom: number) {
 
 function loadViewport(key: string): { x: number; y: number; zoom: number } | null {
   try {
-    const raw = localStorage.getItem(VP_KEY + key)
+    // Try new key first, fall back to legacy canvai key
+    const raw = localStorage.getItem(VP_KEY + key) || localStorage.getItem(VP_KEY_LEGACY + key)
     return raw ? JSON.parse(raw) : null
   } catch { return null }
 }
 
 const BG_KEY = 'bryllen:bg:'
+const BG_KEY_LEGACY = 'canvai:bg:'
 
 export function saveCanvasBg(project: string, color: string) {
   try { localStorage.setItem(BG_KEY + project, color) } catch {}
 }
 
 export function loadCanvasBg(project: string): string | null {
-  try { return localStorage.getItem(BG_KEY + project) } catch { return null }
+  try {
+    return localStorage.getItem(BG_KEY + project) || localStorage.getItem(BG_KEY_LEGACY + project)
+  } catch { return null }
 }
 
 interface CanvasContextValue {
