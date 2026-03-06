@@ -1,6 +1,6 @@
 // cssEscape polyfill for environments that don't have it (jsdom)
-const cssEscape = typeof CSS !== 'undefined' && cssEscape
-  ? cssEscape
+const cssEscape = typeof CSS !== 'undefined' && CSS.escape
+  ? CSS.escape
   : (str: string) => str.replace(/([^\w-])/g, '\\$1')
 
 /**
