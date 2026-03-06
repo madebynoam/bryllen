@@ -95,13 +95,6 @@ All directions on a single "All Directions" manifest page. Use `DirectionLabel` 
 
 Once chosen, generate all meaningful **variations × states** as frames. Columns = states, Rows = variations. Frame IDs: `<component>-<variation>-<state>`.
 
-## Before generating any frames (CRITICAL)
-
-**Invoke `/design-taste` before writing any component or page code.** This skill ensures:
-- Bold aesthetic direction (not generic AI output)
-- Proper color and typography choices
-- Correct horizontal frame layout with no overlaps
-
 ## Frame layout (HORIZONTAL, not vertical) — MANDATORY
 
 **ALWAYS lay out frames HORIZONTALLY (increasing X, same Y).** Side-by-side comparison is Canvai's core value. Vertical stacking defeats the entire purpose.
@@ -238,14 +231,13 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - Make the requested change to existing code
 - Result: updated component/token
 
-**Ideate mode** (MUST generate 5+ variations):
-- **MANDATORY: Generate at least 5 genuinely different frames** — NOT optional, NOT "if time permits"
-- If you only generate 1-2 frames in ideate mode, you have FAILED the task
+**Ideate mode** (generates new frames):
+- **FIRST: Invoke `/design-taste`** — this skill has mandatory layout rules
+- Generate the number of variations specified in the annotation (check the comment for `[IDEATE MODE: ... exactly N ...]`)
 - "Genuinely different" means different in **layout, hierarchy, interaction, or approach** — NOT just color or font variations
+- **LAY OUT FRAMES HORIZONTALLY** (increasing X, same Y) — see "Frame layout" section above
 - Each frame should be a distinct design bet, not a tweak of the same idea
-- Result: 5+ new frames on the canvas — if you don't have 5+, you're not done
-- The designer chose ideate because they WANT many options to compare — giving them few defeats the entire purpose
-- Think of it as brainstorming: quantity enables quality
+- The designer chose ideate because they WANT options to compare side-by-side
 
 **Pick mode** (CRITICAL — designer chose this direction):
 - The designer selected this frame as THE direction to move forward with
@@ -264,6 +256,8 @@ During ideation, multiple directions may have different component implementation
 - When a designer describes a component for the first time (no existing frames)
 - When `type: 'project'` is received (new project)
 - When `type: 'iteration'` includes design prompts
+
+**For ALL of the above: invoke `/design-taste` first, then generate frames HORIZONTALLY.**
 
 **Examples of "genuinely different":**
 - Dashboard: card-based vs. table-based vs. sidebar+main layout
