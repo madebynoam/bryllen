@@ -57,7 +57,7 @@ src/projects/<name>/
   CHANGELOG.md
 ```
 
-## Component hierarchy (mandatory)
+## Component hierarchy (MANDATORY — read this)
 
 ```
 Tokens (v<N>/tokens.css)     → CSS custom properties, all visual values
@@ -67,7 +67,36 @@ Components (v<N>/components/) → use ONLY var(--token), can compose each other
 Pages (v<N>/pages/)           → import ONLY from ../components/
 ```
 
-If a page needs a button, import `Button` from `../components/`. If it doesn't exist, create it in `components/` first. Never inline styled HTML in a page.
+**NEVER inline styled HTML in pages.** Every visual element must be a component.
+
+### Creating a frame with UI elements — REQUIRED STEPS:
+
+1. **Identify ALL components needed** — Card, Button, Sidebar, StatWidget, etc.
+2. **For EACH component:**
+   - Check if it exists in `v<N>/components/index.ts`
+   - If NOT, create it in `v<N>/components/<Name>.tsx`
+   - Add export to `v<N>/components/index.ts`
+   - Add to Components showcase page
+3. **THEN create the page** — import components from `../components/`
+4. **Add page to manifest** — reference the page component
+
+### Example — Dashboard with cards:
+
+```
+WRONG (inlining styles in page):
+// pages/Dashboard.tsx
+export function Dashboard() {
+  return <div style={{ padding: 24 }}><div style={{ background: '#fff' }}>...</div></div>
+}
+
+CORRECT (components first):
+// 1. Create components/StatCard.tsx
+// 2. Create components/Sidebar.tsx
+// 3. Export from components/index.ts
+// 4. THEN create pages/Dashboard.tsx importing from ../components/
+```
+
+**If you skip this and inline HTML, the designer cannot iterate on individual pieces.**
 
 ## Token system
 
@@ -87,11 +116,17 @@ Each iteration owns a complete token set scoped under `.iter-v<N>`. No cascade a
 ## Before any edit (guard protocol)
 
 1. **Read `manifest.ts`** — frozen? Stop.
-2. **Hierarchy check** — pages import only from `../components/`. Components use only `var(--token)`.
-3. **Check `components/index.ts`** — component exists? If not, create first.
-4. **New components** — add to barrel AND to Components showcase page.
-5. **Log to `CHANGELOG.md`**.
-6. **Auto-commit** — `npx bryllen resolve <id>` auto-stages and commits. No manual git needed.
+2. **List ALL UI elements** you're about to create (cards, buttons, sidebars, widgets, etc.)
+3. **For EACH element:**
+   - Read `components/index.ts` — is it exported?
+   - If NO → create in `components/`, add to barrel, add to Components page
+   - If YES → you can use it
+4. **ONLY THEN create/edit pages** — pages import from `../components/` only
+5. **Components use ONLY `var(--token)`** — no hardcoded colors/spacing
+6. **Log to `CHANGELOG.md`**
+7. **Auto-commit** — `npx bryllen resolve <id>` auto-stages and commits
+
+**Shortcut that WILL break things:** Creating a page with inline styled divs. Don't do it.
 
 ## Design directions
 
