@@ -188,6 +188,22 @@ Reference specific images when generating: "Using the warm tones from context im
 
 Designers can annotate context images like any other frame. Clicking a context image in targeting mode allows adding comments like "make more like this" or "use these colors."
 
+**CRITICAL: Identify the SPECIFIC image from the annotation.** The annotation includes:
+- `componentName: "Context Image"`
+- `props.src`: URL like `http://localhost:4748/context-image?project=X&iteration=v1&filename=inspiration-123.png`
+
+**Extract the filename from `props.src`** (the `filename` query parameter). Then read THAT specific image file:
+
+```bash
+# Get list of context images
+npx canvai context --project my-project --iteration v1
+# Returns: { "images": [{ "filename": "inspiration-123.png", "path": "/path/to/file" }, ...] }
+
+# Find the matching image by filename and read THAT file with the Read tool
+```
+
+**Do NOT read all images and pick one arbitrarily.** The designer annotated a SPECIFIC image — use that one.
+
 ## Annotation flow
 
 ```
