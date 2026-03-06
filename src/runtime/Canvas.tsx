@@ -242,6 +242,8 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
     // --- Pointer: drag to pan ---
     function handlePointerDown(e: PointerEvent) {
       if (e.target !== container) return
+      // Don't pan if annotation targeting overlay is active
+      if (document.querySelector('[data-bryllen-targeting]')) return
       e.preventDefault()
       isDraggingRef.current = true
       dragStartRef.current = { x: e.clientX, y: e.clientY }
