@@ -897,7 +897,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
         rect: new DOMRect(screenPos?.x ?? e.clientX, screenPos?.y ?? e.clientY, 0, 0),
         frames: frameInfos,
       })
-      setAnnotationMode('pick')  // Default to pick for multi-select
+      setAnnotationMode('refine')  // Default to refine for multi-select (user can switch to pick/ideate)
       setComment('')
       setHighlight(null)
       setMode('commenting')
@@ -1050,7 +1050,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
     const body = {
       project,
-      type: isConnection ? 'connection' : (isMultiSelect || annotationMode === 'pick') ? 'pick' : undefined,
+      type: isConnection ? 'connection' : annotationMode === 'pick' ? 'pick' : undefined,
       frameId: target.frameId,
       frameIds: target.frameIds,  // Include frameIds array for multi-select
       componentName: target.componentName,
@@ -1061,7 +1061,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       elementText: target.elementText,
       computedStyles: target.computedStyles,
       comment: finalComment,
-      mode: isMultiSelect ? 'pick' : annotationMode,
+      mode: annotationMode,
     }
 
     try {
@@ -1498,7 +1498,9 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               onChange={e => setComment(e.target.value)}
               placeholder={
                 target.elementTag === 'multi-select'
-                  ? 'Why are you picking these frames? (optional)'
+                  ? annotationMode === 'pick'
+                    ? 'Why are you picking these frames? (optional)'
+                    : 'Describe the change for these frames...'
                   : target.elementTag === 'connection'
                     ? 'How should these be combined?'
                     : target.frameId
@@ -1521,16 +1523,13 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               }}
             />
             <DialogActions>
-              {/* Multi-select defaults to pick and hides mode toggle */}
-              {target.elementTag !== 'multi-select' && (
-                <ModeToggle
-                  value={annotationMode}
-                  onChange={setAnnotationMode}
-                  showPick={!!target.frameId && target.elementTag !== 'connection' && target.elementTag !== 'canvas'}
-                  variationCount={variationCount}
-                  onVariationChange={setVariationCount}
-                />
-              )}
+              <ModeToggle
+                value={annotationMode}
+                onChange={setAnnotationMode}
+                showPick={!!target.frameId && target.elementTag !== 'connection' && target.elementTag !== 'canvas'}
+                variationCount={variationCount}
+                onVariationChange={setVariationCount}
+              />
               <div style={{ flex: 1 }} />
               <ActionButton variant="ghost" onClick={handleCancel}>Cancel</ActionButton>
               <ActionButton variant="primary" disabled={target?.elementTag !== 'multi-select' && !comment.trim()} onClick={handleApply}>Save</ActionButton>
