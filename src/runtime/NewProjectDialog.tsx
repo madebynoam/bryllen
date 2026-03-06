@@ -115,6 +115,7 @@ export function NewProjectDialog({ open, onClose, onSubmit, defaultName }: NewPr
       for (const item of e.clipboardData.items) {
         if (item.type.startsWith('image/')) {
           e.preventDefault()
+          e.stopImmediatePropagation() // Prevent Canvas from also handling this paste
           const blob = item.getAsFile()
           if (!blob) continue
 

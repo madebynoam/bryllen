@@ -90,6 +90,7 @@ export function NewIterationDialog({ open, onClose, onSubmit }: NewIterationDial
       for (const item of e.clipboardData.items) {
         if (item.type.startsWith('image/')) {
           e.preventDefault()
+          e.stopImmediatePropagation() // Prevent Canvas from also handling this paste
           const blob = item.getAsFile()
           if (!blob) continue
 
