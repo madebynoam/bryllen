@@ -76,6 +76,9 @@ import { Codex as Codex8 } from './v8/pages/codex'
 import { CodexReference } from './v8/pages/codex-reference'
 import { CodexTerminal } from './v8/pages/codex-terminal'
 import { CodexGallery } from './v8/pages/codex-gallery'
+import { DocsManual } from './v8/pages/docs-manual'
+import { DocsTerminal } from './v8/pages/docs-terminal'
+import { DocsGuide } from './v8/pages/docs-guide'
 import { Gauge as Gauge8 } from './v8/pages/gauge'
 import { Plank as Plank8 } from './v8/pages/plank'
 import { Verso as Verso8 } from './v8/pages/verso'
@@ -671,6 +674,15 @@ const manifest: ProjectManifest = {
             { id: 'v8-codex-reference', title: 'Codex Reference — Refined Swiss Book', component: CodexReference, width: 1440, height: 3200 },
             { id: 'v8-codex-terminal', title: 'Codex Terminal — Dark Developer CLI', component: CodexTerminal, width: 1440, height: 3200 },
             { id: 'v8-codex-gallery', title: 'Codex Gallery — Museum Whitespace', component: CodexGallery, width: 1440, height: 3200 },
+          ],
+        },
+        {
+          name: 'Documentation Variations',
+          grid: { columns: 3, columnWidth: 1440, rowHeight: 900, gap: 40 },
+          frames: [
+            { id: 'v8-docs-manual', title: 'Docs Manual — Book Style', component: DocsManual, width: 1440, height: 900 },
+            { id: 'v8-docs-terminal', title: 'Docs Terminal — CLI Man Page', component: DocsTerminal, width: 1440, height: 900 },
+            { id: 'v8-docs-guide', title: 'Docs Guide — Modern Sidebar', component: DocsGuide, width: 1440, height: 900 },
           ],
         },
       ],
