@@ -397,20 +397,22 @@ export function AnnotationPanelWidget({ endpoint }: { endpoint: string }) {
               color: V.txtSec,
             }}
           >
-            <div style={{
-              width: 14,
-              height: 14,
-              borderRadius: 3,
-              border: `1px solid ${autoApply ? A.accent : V.border}`,
-              background: autoApply ? A.accent : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 150ms ease-out',
-              animation: autoApply ? 'bryllen-check-pop 200ms ease-out' : 'none',
-            }}>
+            <div
+              key={autoApply ? 'checked' : 'unchecked'}
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 3,
+                border: `1px solid ${autoApply ? A.accent : V.border}`,
+                background: autoApply ? A.accent : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: autoApply ? 'bryllen-check-pop 200ms ease-out' : 'none',
+              }}
+            >
               {autoApply && (
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <svg key="check" width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path
                     d="M2 5L4 7L8 3"
                     stroke={D.text}
