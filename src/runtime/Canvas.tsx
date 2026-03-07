@@ -185,7 +185,7 @@ export function Canvas({ children, pageKey, hud, onImagePaste }: CanvasProps) {
   const dragStartRef = useRef({ x: 0, y: 0 })
   const panStartRef = useRef({ x: 0, y: 0 })
   const commitRafRef = useRef<number>(0)
-  const prevPageKeyRef = useRef<string | undefined>(pageKey)
+  const prevPageKeyRef = useRef<string | undefined>(undefined)
 
   panRef.current = pan
   zoomRef.current = zoom
