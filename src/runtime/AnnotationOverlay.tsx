@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { SquareMousePointer, Trash2, Pencil, Lightbulb, Check, Minus, Plus } from 'lucide-react'
+import { SquareMousePointer, Trash2, Pencil, Lightbulb, Check, Minus, Plus, X } from 'lucide-react'
 import { A, F, D, S, R, T, ICON, FONT, V } from './tokens'
 import { DialogCard, DialogActions, ActionButton } from './Menu'
 import type { CanvasFrame, CanvasComponentFrame, Connection } from './types'
@@ -470,6 +470,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
   const [highlight, setHighlight] = useState<DOMRect | null>(null)
   const [target, setTarget] = useState<TargetInfo | null>(null)
   const [comment, setComment] = useState('')
+  const [pastedImage, setPastedImage] = useState<string | null>(null)
   const [annotationMode, setAnnotationMode] = useState<AnnotationMode>('refine')
   const [variationCount, setVariationCount] = useState(5)
   const [buttonState, setButtonState] = useState<'idle' | 'hover' | 'pressed'>('idle')
@@ -1044,6 +1045,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       elementText: target.elementText,
       computedStyles: target.computedStyles,
       comment: finalComment,
+      image: pastedImage ?? undefined,
       mode: annotationMode,
     }
 
@@ -1092,8 +1094,9 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     setMode('idle')
     setTarget(null)
     setComment('')
+    setPastedImage(null)
     setEditingMarkerId(null)
-  }, [target, comment, endpoint, editingMarkerId, toast, project, annotationMode, variationCount])
+  }, [target, comment, endpoint, editingMarkerId, toast, project, annotationMode, variationCount, pastedImage])
 
   const handleCancel = useCallback(() => {
     // If canceling a new connection, remove it
@@ -1108,6 +1111,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
     setTarget(null)
     setHighlight(null)
     setComment('')
+    setPastedImage(null)
     setEditingMarkerId(null)
     setEditingConnectionId(null)
     setDragState(null)
@@ -1134,6 +1138,24 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
       handleApply()
     }
   }, [handleApply, mode])
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = () => {
+          setPastedImage(reader.result as string)
+        }
+        reader.readAsDataURL(file)
+        return
+      }
+    }
+  }, [])
 
   // Global Escape to dismiss targeting/commenting mode
   useEffect(() => {
@@ -1479,6 +1501,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
               ref={textareaRef}
               value={comment}
               onChange={e => setComment(e.target.value)}
+              onPaste={handlePaste}
               placeholder={
                 target.elementTag === 'multi-select'
                   ? annotationMode === 'pick'
@@ -1505,6 +1528,42 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
                 fontFamily: 'inherit',
               }}
             />
+            {/* Pasted image preview */}
+            {pastedImage && (
+              <div style={{ position: 'relative', marginTop: S.sm }}>
+                <img
+                  src={pastedImage}
+                  alt="Pasted"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 120,
+                    borderRadius: R.ui,
+                    border: `1px solid ${V.border}`,
+                  }}
+                />
+                <button
+                  onClick={() => setPastedImage(null)}
+                  style={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'rgba(0,0,0,0.6)',
+                    color: '#fff',
+                    cursor: 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                  }}
+                >
+                  <X size={12} strokeWidth={2} />
+                </button>
+              </div>
+            )}
             <DialogActions>
               <ModeToggle
                 value={annotationMode}

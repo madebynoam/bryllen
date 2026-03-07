@@ -134,6 +134,7 @@ function addAnnotation(data) {
     elementText: data.elementText ?? '',
     computedStyles: data.computedStyles ?? {},
     comment: data.comment ?? '',
+    image: data.image ?? null,
     timestamp: Date.now(),
     status: isImmediate ? 'pending' : 'draft',
     mode: data.mode ?? 'refine',
