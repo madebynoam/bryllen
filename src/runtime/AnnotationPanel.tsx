@@ -374,26 +374,25 @@ export function AnnotationPanelWidget({ endpoint }: { endpoint: string }) {
           <span style={{ fontSize: T.ui, fontWeight: 600, color: V.txtPri }}>
             Annotations
           </span>
-          {/* Auto-apply toggle */}
-          <button
-            onClick={() => setAutoApply(a => !a)}
-            title={autoApply ? 'Auto-apply on' : 'Auto-apply off'}
+          {/* Auto-apply checkbox */}
+          <label
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: S.xs,
-              padding: `${S.xs}px ${S.sm}px`,
-              border: 'none',
-              borderRadius: R.ui,
-              background: autoApply ? A.accent : 'transparent',
-              color: autoApply ? D.text : V.txtSec,
-              fontSize: T.ui,
-              fontWeight: 500,
               cursor: 'default',
+              fontSize: T.ui,
+              color: V.txtSec,
             }}
           >
-            Auto
-          </button>
+            <input
+              type="checkbox"
+              checked={autoApply}
+              onChange={e => setAutoApply(e.target.checked)}
+              style={{ margin: 0, cursor: 'default' }}
+            />
+            Auto apply
+          </label>
         </div>
 
         {/* List */}
