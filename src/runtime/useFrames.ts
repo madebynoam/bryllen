@@ -9,7 +9,7 @@ function frameIdsKey(frames: CanvasFrame[]): string {
   return frames.map(f => f.id).join(',')
 }
 
-async function loadPositionsServer(project: string, page: string): Promise<Record<string, { x: number; y: number }> | null> {
+async function loadPositionsServer(project: string, page: string): Promise<Record<string, { x: number; y: number; manuallyPositioned?: boolean }> | null> {
   try {
     const res = await fetch(`${SERVER_ENDPOINT}/frame-positions?project=${encodeURIComponent(project)}&page=${encodeURIComponent(page)}`)
     const data = await res.json()
@@ -21,8 +21,8 @@ async function loadPositionsServer(project: string, page: string): Promise<Recor
 
 async function savePositionsServer(project: string, page: string, frames: CanvasFrame[]) {
   if (frames.length === 0) return
-  const positions: Record<string, { x: number; y: number }> = {}
-  for (const f of frames) positions[f.id] = { x: f.x, y: f.y }
+  const positions: Record<string, { x: number; y: number; manuallyPositioned?: boolean }> = {}
+  for (const f of frames) positions[f.id] = { x: f.x, y: f.y, manuallyPositioned: f.manuallyPositioned }
   try {
     await fetch(`${SERVER_ENDPOINT}/frame-positions`, {
       method: 'PUT',
@@ -61,7 +61,6 @@ export function useFrames(
   const persistConfigRef = useRef(persistConfig)
   persistConfigRef.current = persistConfig
   const positionsLoadedRef = useRef(false)
-  const layoutStabilizedRef = useRef(false)
 
   const sourceKey = frameIdsKey(sourceFrames)
   sourceKeyRef.current = sourceKey
@@ -77,11 +76,10 @@ export function useFrames(
   useEffect(() => {
     let cancelled = false
     positionsLoadedRef.current = false
-    layoutStabilizedRef.current = false
 
     async function load() {
       const base = sourceFramesRef.current
-      let saved: Record<string, { x: number; y: number }> | null = null
+      let saved: Record<string, { x: number; y: number; manuallyPositioned?: boolean }> | null = null
 
       // Load from server (SQLite)
       if (persistConfigRef.current?.project && persistConfigRef.current?.page) {
@@ -91,16 +89,17 @@ export function useFrames(
       if (cancelled) return
 
       const merged = saved
-        ? base.map(f => saved![f.id] ? { ...f, x: saved![f.id].x, y: saved![f.id].y } : f)
+        ? base.map(f => saved![f.id] ? {
+            ...f,
+            x: saved![f.id].x,
+            y: saved![f.id].y,
+            manuallyPositioned: saved![f.id].manuallyPositioned,
+          } : f)
         : base
 
       setFrames(merged)
       measuredHeightsRef.current = {}
       positionsLoadedRef.current = true
-      // Give frames time to render before allowing relayout
-      setTimeout(() => {
-        if (!cancelled) layoutStabilizedRef.current = true
-      }, 500)
     }
 
     load()
@@ -111,8 +110,6 @@ export function useFrames(
   // Listen for frame resize events (works without onResize prop)
   useEffect(() => {
     function onFrameResize(e: Event) {
-      // Don't relayout until positions have stabilized after load
-      if (!layoutStabilizedRef.current) return
       const { id, height } = (e as CustomEvent).detail
       const prev = measuredHeightsRef.current[id]
       if (prev != null && Math.abs(prev - height) < 1) return
@@ -145,8 +142,6 @@ export function useFrames(
 
   // handleResize kept for backward compat (consumers passing onResize prop)
   const handleResize = useCallback((id: string, height: number) => {
-    // Don't relayout until positions have stabilized after load
-    if (!layoutStabilizedRef.current) return
     const prev = measuredHeightsRef.current[id]
     if (prev != null && Math.abs(prev - height) < 1) return
 
@@ -166,7 +161,14 @@ export function useFrames(
 
   const updateFrame = useCallback((id: string, updates: Partial<CanvasFrame>) => {
     setFrames(prev =>
-      prev.map(f => (f.id === id ? { ...f, ...updates } : f))
+      prev.map(f => {
+        if (f.id !== id) return f
+        // If position changed, mark as manually positioned
+        const positionChanged = ('x' in updates && updates.x !== f.x) || ('y' in updates && updates.y !== f.y)
+        const updated = { ...f, ...updates } as CanvasFrame
+        if (positionChanged) updated.manuallyPositioned = true
+        return updated
+      })
     )
   }, [])
 

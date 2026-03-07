@@ -9,6 +9,8 @@ interface BaseCanvasFrame {
   width: number
   height: number
   onResize?: (id: string, height: number) => void
+  /** When true, relayout skips this frame - user dragged it manually */
+  manuallyPositioned?: boolean
 }
 
 /** A component frame positioned on the canvas */

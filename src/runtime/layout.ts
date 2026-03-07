@@ -96,6 +96,9 @@ export function relayoutFrames(
   }
 
   return frames.map((frame, index) => {
+    // Skip manually positioned frames - respect user's drag position
+    if (frame.manuallyPositioned) return frame
+
     const row = Math.floor(index / columns)
     return {
       ...frame,

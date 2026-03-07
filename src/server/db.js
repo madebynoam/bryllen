@@ -29,6 +29,7 @@ export function initDb(bryllenDir) {
       frame_id TEXT NOT NULL,
       x REAL NOT NULL,
       y REAL NOT NULL,
+      manually_positioned INTEGER DEFAULT 0,
       updated_at INTEGER DEFAULT (strftime('%s', 'now')),
       PRIMARY KEY (project, page, frame_id)
     );
@@ -66,6 +67,13 @@ export function initDb(bryllenDir) {
       ON context_positions(project, iteration);
   `)
 
+  // Add manually_positioned column if it doesn't exist (migration for existing DBs)
+  try {
+    db.exec(`ALTER TABLE frame_positions ADD COLUMN manually_positioned INTEGER DEFAULT 0`)
+  } catch {
+    // Column already exists, ignore
+  }
+
   // Migrate old JSON files if they exist
   migrateOldData(bryllenDir)
 
@@ -86,7 +94,7 @@ export function getDb() {
 
 export function getFramePositions(project, page) {
   const rows = getDb().prepare(`
-    SELECT frame_id, x, y FROM frame_positions
+    SELECT frame_id, x, y, manually_positioned FROM frame_positions
     WHERE project = ? AND page = ?
   `).all(project, page)
 
@@ -94,7 +102,11 @@ export function getFramePositions(project, page) {
 
   const positions = {}
   for (const row of rows) {
-    positions[row.frame_id] = { x: row.x, y: row.y }
+    positions[row.frame_id] = {
+      x: row.x,
+      y: row.y,
+      manuallyPositioned: row.manually_positioned === 1,
+    }
   }
   return positions
 }
@@ -102,17 +114,18 @@ export function getFramePositions(project, page) {
 export function saveFramePositions(project, page, positions) {
   const db = getDb()
   const upsert = db.prepare(`
-    INSERT INTO frame_positions (project, page, frame_id, x, y, updated_at)
-    VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'))
+    INSERT INTO frame_positions (project, page, frame_id, x, y, manually_positioned, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'))
     ON CONFLICT(project, page, frame_id) DO UPDATE SET
       x = excluded.x,
       y = excluded.y,
+      manually_positioned = excluded.manually_positioned,
       updated_at = excluded.updated_at
   `)
 
   const transaction = db.transaction(() => {
     for (const [frameId, pos] of Object.entries(positions)) {
-      upsert.run(project, page, frameId, pos.x, pos.y)
+      upsert.run(project, page, frameId, pos.x, pos.y, pos.manuallyPositioned ? 1 : 0)
     }
   })
   transaction()
