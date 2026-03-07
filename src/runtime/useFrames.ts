@@ -61,6 +61,7 @@ export function useFrames(
   const persistConfigRef = useRef(persistConfig)
   persistConfigRef.current = persistConfig
   const positionsLoadedRef = useRef(false)
+  const layoutStabilizedRef = useRef(false)
 
   const sourceKey = frameIdsKey(sourceFrames)
   sourceKeyRef.current = sourceKey
@@ -76,6 +77,7 @@ export function useFrames(
   useEffect(() => {
     let cancelled = false
     positionsLoadedRef.current = false
+    layoutStabilizedRef.current = false
 
     async function load() {
       const base = sourceFramesRef.current
@@ -95,6 +97,10 @@ export function useFrames(
       setFrames(merged)
       measuredHeightsRef.current = {}
       positionsLoadedRef.current = true
+      // Give frames time to render before allowing relayout
+      setTimeout(() => {
+        if (!cancelled) layoutStabilizedRef.current = true
+      }, 500)
     }
 
     load()
@@ -105,6 +111,8 @@ export function useFrames(
   // Listen for frame resize events (works without onResize prop)
   useEffect(() => {
     function onFrameResize(e: Event) {
+      // Don't relayout until positions have stabilized after load
+      if (!layoutStabilizedRef.current) return
       const { id, height } = (e as CustomEvent).detail
       const prev = measuredHeightsRef.current[id]
       if (prev != null && Math.abs(prev - height) < 1) return
@@ -137,6 +145,8 @@ export function useFrames(
 
   // handleResize kept for backward compat (consumers passing onResize prop)
   const handleResize = useCallback((id: string, height: number) => {
+    // Don't relayout until positions have stabilized after load
+    if (!layoutStabilizedRef.current) return
     const prev = measuredHeightsRef.current[id]
     if (prev != null && Math.abs(prev - height) < 1) return
 
