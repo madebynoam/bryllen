@@ -21,6 +21,7 @@ import { checkForUpdate, getDismissedVersion } from './versionCheck'
 import { VERSION } from './version'
 import { D, E, S, T, R, FONT, DIM, V } from './tokens'
 import { ThemeProvider, useTheme } from './useTheme'
+import { TokenPanel, TokenPanelToggle } from './TokenPanel'
 import type { ProjectManifest, CanvasImageFrame } from './types'
 
 interface BryllenShellProps {
@@ -69,9 +70,6 @@ function parseUrl(manifests: ProjectManifest[]): { projectIdx: number; iteration
     const idx = iteration?.pages?.findIndex(p => p.name.toLowerCase() === pageName.toLowerCase()) ?? -1
     if (idx >= 0) {
       pageIdx = idx
-    } else if (import.meta.env.DEV && pageName.toLowerCase() === 'context') {
-      // Context is a virtual DEV-only page, appended after manifest pages
-      pageIdx = iteration?.pages?.length ?? 0
     }
   }
 
@@ -444,12 +442,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   const iterationName = activeIteration?.name ?? 'v1'
 
   // Sync URL when navigation changes
-  const augmentedPagesForUrl = [
-    ...(activeIteration?.pages ?? []),
-    ...(import.meta.env.DEV && !activeIteration?.pages?.some(p => p.name === 'Context')
-      ? [{ name: 'Context', frames: [] }]
-      : []),
-  ]
+  const augmentedPagesForUrl = activeIteration?.pages ?? []
   const activePageForUrl = augmentedPagesForUrl[activePageIndex]
   useEffect(() => {
     if (activeProject?.project && activeIteration?.name && activePageForUrl?.name) {
@@ -460,17 +453,16 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
   }, [activeProject?.project, activeIteration?.name, activePageForUrl?.name])
 
-  // Build augmented pages array with Context page (DEV only)
-  const augmentedPages = [
-    ...(activeIteration?.pages ?? []),
-    ...(import.meta.env.DEV && !activeIteration?.pages?.some(p => p.name === 'Context')
-      ? [{ name: 'Context', frames: [] }]
-      : []),
-  ]
+  // Build pages array (no longer adding virtual Context page)
+  const augmentedPages = activeIteration?.pages ?? []
   const activePage = augmentedPages[activePageIndex]
   const pageName = activePage?.name ?? ''
-  const isContextPage = pageName === 'Context'
-  const layoutedFrames = activePage && !isContextPage ? layoutFrames(activePage) : []
+  const layoutedFrames = activePage ? layoutFrames(activePage) : []
+
+  // Token panel state
+  const [tokenPanelOpen, setTokenPanelOpen] = useState(false)
+  // Find the Tokens page for the panel
+  const tokensPage = augmentedPages.find(p => p.name === 'Tokens')
 
   const persistConfig = activeProject?.project && pageName
     ? { project: activeProject.project, page: `${iterationName}/${pageName}` }
@@ -484,8 +476,8 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   useEffect(() => {
     if (!activeProject?.project || !pageName) return
 
-    // Build URL with page param (Context page uses root context folder for backwards compat)
-    const pageParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
+    // Build URL with page param (images stored per-page)
+    const pageParam = `&page=${encodeURIComponent(pageName)}`
     const url = `${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageParam}`
 
     fetch(url)
@@ -495,12 +487,11 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
           const positions = data.positions || {}
           const images = data.images.map((img: { filename: string; path: string }, i: number) => {
             const saved = positions[img.filename]
-            const pageQueryParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
             return {
               type: 'image' as const,
               id: `${pageName}-${img.filename}`,
               title: img.filename,
-              src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageQueryParam}&filename=${encodeURIComponent(img.filename)}`,
+              src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&page=${encodeURIComponent(pageName)}&filename=${encodeURIComponent(img.filename)}`,
               x: saved?.x ?? 50 + (i % 4) * 320,
               y: saved?.y ?? 50 + Math.floor(i / 4) * 320,
               width: saved?.width ?? 300,
@@ -513,7 +504,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         }
       })
       .catch(() => setPageImages(prev => ({ ...prev, [pageName]: [] })))
-  }, [activeProject?.project, iterationName, pageName, isContextPage, annotationEndpoint])
+  }, [activeProject?.project, iterationName, pageName, annotationEndpoint])
 
   // Save image positions per-page (debounced)
   const savePositionsRef = useRef<ReturnType<typeof setTimeout>>()
@@ -526,30 +517,26 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         const filename = img.title
         positions[filename] = { x: img.x, y: img.y, width: img.width, height: img.height }
       }
-      // Context page uses root context folder, other pages use subfolders
-      const pageParam = isContextPage ? undefined : pageName
       fetch(`${annotationEndpoint}/context-positions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: activeProject.project, iteration: iterationName, page: pageParam, positions }),
+        body: JSON.stringify({ project: activeProject.project, iteration: iterationName, page: pageName, positions }),
       }).catch(() => {})
     }, 300)
-  }, [currentPageImages, activeProject?.project, iterationName, pageName, isContextPage, annotationEndpoint])
+  }, [currentPageImages, activeProject?.project, iterationName, pageName, annotationEndpoint])
 
   // Handle image paste — save to server and add to current page
   const handleImagePaste = useCallback(async (dataUrl: string, filename: string, viewportCenter: { x: number; y: number }) => {
     if (!activeProject?.project || !pageName) return
 
     try {
-      // Context page uses root context folder, other pages use subfolders
-      const pageParam = isContextPage ? undefined : pageName
       const res = await fetch(`${annotationEndpoint}/context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project: activeProject.project,
           iteration: iterationName,
-          page: pageParam,
+          page: pageName,
           dataUrl,
           filename,
         }),
@@ -558,7 +545,6 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
 
       if (result.path) {
         // Add to local state immediately — position near viewport center with slight offset for each image
-        const pageQueryParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
         const currentImages = pageImages[pageName] ?? []
         // Offset each subsequent image slightly so they don't stack exactly
         const offsetIndex = currentImages.length % 5
@@ -566,7 +552,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
           type: 'image',
           id: `${pageName}-${result.filename}`,
           title: result.filename,
-          src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageQueryParam}&filename=${encodeURIComponent(result.filename)}`,
+          src: `${annotationEndpoint}/context-image?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&page=${encodeURIComponent(pageName)}&filename=${encodeURIComponent(result.filename)}`,
           x: viewportCenter.x - 150 + offsetIndex * 30,  // Center minus half width, plus cascade offset
           y: viewportCenter.y - 150 + offsetIndex * 30,  // Center minus half height, plus cascade offset
           width: 300,
@@ -578,16 +564,14 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     } catch {
       showToast('Failed to save image')
     }
-  }, [activeProject?.project, iterationName, pageName, isContextPage, pageImages, annotationEndpoint, showToast])
+  }, [activeProject?.project, iterationName, pageName, pageImages, annotationEndpoint, showToast])
 
   // Handle image deletion from current page
   const handleDeletePageImage = useCallback(async (imageId: string, filename: string) => {
     if (!activeProject?.project || !pageName) return
 
     try {
-      // Context page uses root context folder, other pages use subfolders
-      const pageParam = isContextPage ? '' : `&page=${encodeURIComponent(pageName)}`
-      const res = await fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}${pageParam}&filename=${encodeURIComponent(filename)}`, {
+      const res = await fetch(`${annotationEndpoint}/context?project=${encodeURIComponent(activeProject.project)}&iteration=${encodeURIComponent(iterationName)}&page=${encodeURIComponent(pageName)}&filename=${encodeURIComponent(filename)}`, {
         method: 'DELETE',
       })
       if (res.ok) {
@@ -602,7 +586,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     } catch {
       showToast('Failed to delete image')
     }
-  }, [activeProject?.project, iterationName, pageName, isContextPage, annotationEndpoint, showToast])
+  }, [activeProject?.project, iterationName, pageName, annotationEndpoint, showToast])
 
   const projectKey = activeProject?.project ?? ''
   const [canvasBg, setCanvasBg] = useState(DEFAULT_CANVAS_COLOR)
@@ -753,12 +737,18 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
               pageKey={`${activeProject?.project ?? ''}-${activeIteration?.name ?? ''}-${activePage?.name ?? ''}`}
               onImagePaste={handleImagePaste}
               hud={<>
-                <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 5 }}>
+                <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 5, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <CanvasColorPicker activeColor={canvasBg} onSelect={setCanvasBg} />
+                  {tokensPage && <TokenPanelToggle onClick={() => setTokenPanelOpen(o => !o)} />}
                 </div>
                 <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
                   <ZoomControl />
                 </div>
+                <TokenPanel
+                  open={tokenPanelOpen}
+                  onClose={() => setTokenPanelOpen(false)}
+                  tokensPage={tokensPage}
+                />
               </>}
             >
               {/* Render component frames */}
@@ -819,7 +809,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         </div>
       </div>
 
-      {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={[...frames, ...currentPageImages]} showToast={showToast} project={projectKey} />}
+      {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={[...frames, ...currentPageImages]} showToast={showToast} project={projectKey} projectId={activeProject?.id} />}
       {/* Comment overlay hidden for now */}
       {/* <CommentOverlay endpoint={annotationEndpoint} frames={frames} onCommentCountChange={setCommentCount} /> */}
       {import.meta.env.DEV && (

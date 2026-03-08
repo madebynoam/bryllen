@@ -15,11 +15,11 @@ export const lightPresets: CanvasColorPreset[] = [
   { name: 'Warm', value: 'oklch(0.92 0 0)' },       // #EAEAEA
 ]
 
-// Dark mode presets
+// Dark mode presets — lightest to darkest (like light mode)
 export const darkPresets: CanvasColorPreset[] = [
-  { name: 'Deep', value: 'oklch(0.14 0 0)' },       // #1A1A1A
-  { name: 'Medium', value: 'oklch(0.18 0 0)' },     // #222222
-  { name: 'Soft', value: 'oklch(0.22 0 0)' },       // #2A2A2A
+  { name: 'Soft', value: 'oklch(0.28 0.006 80)' },     // softer dark
+  { name: 'Medium', value: 'oklch(0.24 0.006 80)' },   // balanced dark
+  { name: 'Deep', value: 'oklch(0.20 0.006 80)' },     // warm charcoal
 ]
 
 export const DEFAULT_CANVAS_COLOR = 'oklch(0.96 0 0)'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Palette, Layers, Images } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { S, R, T, ICON, FONT, DIM, V } from './tokens'
 import { InfoButton } from './InfoButton'
 
@@ -45,7 +45,7 @@ function SidebarRow({ children, icon, active, onClick }: {
         padding: `0 ${S.sm}px`,
         margin: `0 ${S.xs}px`,
         borderRadius: R.ui, cornerShape: 'squircle',
-        backgroundColor: active ? V.active : hovered ? V.chrome : 'transparent',
+        backgroundColor: active ? V.active : hovered ? V.active : 'transparent',
         fontFamily: FONT, textAlign: 'left',
         fontSize: T.ui,
         fontWeight: 400,
@@ -64,8 +64,8 @@ function SidebarRow({ children, icon, active, onClick }: {
 export function IterationSidebar({ iterationName, pages, activePageIndex, onSelectPage, collapsed }: IterationSidebarProps) {
   if (pages.length === 0) return null
 
-  /* Split pages into system pages (Tokens, Components, Context) and iteration pages */
-  const systemNames = ['Tokens', 'Components', 'Context']
+  /* Split pages into system pages (Components only) and iteration pages */
+  const systemNames = ['Components']
   const systemPages: { name: string; index: number }[] = []
   const iterPages: { name: string; index: number }[] = []
 
@@ -78,9 +78,7 @@ export function IterationSidebar({ iterationName, pages, activePageIndex, onSele
   })
 
   const iconForSystem = (name: string) => {
-    if (name === 'Tokens') return <Palette size={ICON.sm} strokeWidth={1.5} style={{ color: V.txtMuted, flexShrink: 0 }} />
     if (name === 'Components') return <Layers size={ICON.sm} strokeWidth={1.5} style={{ color: V.txtMuted, flexShrink: 0 }} />
-    if (name === 'Context') return <Images size={ICON.sm} strokeWidth={1.5} style={{ color: V.txtMuted, flexShrink: 0 }} />
     return null
   }
 
