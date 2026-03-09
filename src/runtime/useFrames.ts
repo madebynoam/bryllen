@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import type { ComponentType } from 'react'
 import type { CanvasFrame } from './types'
 import { relayoutFrames } from './layout'
 
@@ -49,6 +50,57 @@ async function deleteFrameServer(project: string, page: string, frameId: string)
   } catch {}
 }
 
+interface DbFrame {
+  id: string
+  title: string
+  componentKey: string | null
+  src: string | null
+  props: Record<string, unknown>
+  width: number | null
+  height: number | null
+  sortOrder: number
+}
+
+async function loadDbFrames(project: string): Promise<DbFrame[]> {
+  try {
+    const res = await fetch(`${SERVER_ENDPOINT}/frames?project=${encodeURIComponent(project)}`)
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
+function resolveDbFrames(dbFrames: DbFrame[], components: Record<string, ComponentType<any>>): CanvasFrame[] {
+  const resolved: CanvasFrame[] = []
+  for (const f of dbFrames) {
+    if (f.src) {
+      resolved.push({
+        type: 'image',
+        id: f.id,
+        title: f.title,
+        src: f.src,
+        x: 0,
+        y: 0,
+        width: f.width ?? 300,
+        height: f.height ?? 300,
+      })
+    } else if (f.componentKey && components[f.componentKey]) {
+      resolved.push({
+        type: 'component',
+        id: f.id,
+        title: f.title,
+        component: components[f.componentKey],
+        props: f.props,
+        x: 0,
+        y: 0,
+        width: f.width ?? 1440,
+        height: f.height ?? 900,
+      })
+    }
+  }
+  return resolved
+}
+
 /** Infer column count from frame x positions when gridConfig is not provided */
 function inferColumns(frames: CanvasFrame[]): number {
   if (frames.length === 0) return 4
@@ -62,36 +114,117 @@ export interface FramePersistenceConfig {
 }
 
 export function useFrames(
-  sourceFrames: CanvasFrame[] = [],
+  sourceFrames: CanvasFrame[] | undefined,
   gridConfig?: { columns?: number; rowHeight?: number; gap?: number },
   persistConfig?: FramePersistenceConfig,
+  componentsRegistry?: Record<string, ComponentType<any>>,
 ) {
-  const [frames, setFrames] = useState<CanvasFrame[]>(sourceFrames)
+  const isDbMode = sourceFrames === undefined
+  const effectiveSource = sourceFrames ?? []
+
+  const [frames, setFrames] = useState<CanvasFrame[]>(effectiveSource)
   const measuredHeightsRef = useRef<Record<string, number>>({})
   const deletedIdsRef = useRef<Set<string>>(new Set())
   const rafRef = useRef<number>(0)
   const gridConfigRef = useRef(gridConfig)
   gridConfigRef.current = gridConfig
-  const sourceFramesRef = useRef(sourceFrames)
-  sourceFramesRef.current = sourceFrames
+  const sourceFramesRef = useRef(effectiveSource)
+  sourceFramesRef.current = effectiveSource
   const sourceKeyRef = useRef('')
   const effectiveConfigRef = useRef<{ columns?: number; rowHeight?: number; gap?: number }>({})
   const persistConfigRef = useRef(persistConfig)
   persistConfigRef.current = persistConfig
   const positionsLoadedRef = useRef(false)
+  const componentsRegistryRef = useRef(componentsRegistry)
+  componentsRegistryRef.current = componentsRegistry
 
-  const sourceKey = frameIdsKey(sourceFrames)
+  const sourceKey = isDbMode ? '__db__' : frameIdsKey(effectiveSource)
   sourceKeyRef.current = sourceKey
 
   // Effective grid config: use provided or infer columns from layout
   if (gridConfig) {
     effectiveConfigRef.current = gridConfig
-  } else if (sourceFrames.length > 0) {
-    effectiveConfigRef.current = { columns: inferColumns(sourceFrames) }
+  } else if (effectiveSource.length > 0) {
+    effectiveConfigRef.current = { columns: inferColumns(effectiveSource) }
   }
 
-  // Sync when source frames actually change (page switch = different IDs)
+  // DB mode: load frames from server and listen for SSE updates
   useEffect(() => {
+    if (!isDbMode || !persistConfig?.project) return
+
+    let cancelled = false
+
+    async function loadFromDb() {
+      const project = persistConfigRef.current!.project
+      const dbFrames = await loadDbFrames(project)
+      if (cancelled) return
+
+      const registry = componentsRegistryRef.current ?? {}
+      const resolved = resolveDbFrames(dbFrames, registry)
+
+      // Load positions from server to restore manual positions
+      const saved = await loadFrameDataServer(project, 'canvas')
+      if (cancelled) return
+
+      deletedIdsRef.current = new Set(saved.deletedIds)
+      const withPositions = saved.positions
+        ? resolved.map(f => {
+            const savedPos = saved.positions![f.id]
+            if (savedPos && savedPos.manuallyPositioned) {
+              return { ...f, x: savedPos.x, y: savedPos.y, manuallyPositioned: true }
+            }
+            return f
+          })
+        : resolved
+
+      setFrames(withPositions)
+      measuredHeightsRef.current = {}
+      positionsLoadedRef.current = true
+    }
+
+    loadFromDb()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDbMode, persistConfig?.project])
+
+  // DB mode: SSE listener for frame-created / frame-deleted / frame-updated
+  useEffect(() => {
+    if (!isDbMode || !persistConfig?.project) return
+
+    const project = persistConfig.project
+    const source = new EventSource(`${SERVER_ENDPOINT}/annotations/events?project=${encodeURIComponent(project)}`)
+
+    source.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        if (data.type === 'frame-created' || data.type === 'frame-deleted' || data.type === 'frame-updated') {
+          // Re-fetch all frames from DB
+          loadDbFrames(project).then(dbFrames => {
+            const registry = componentsRegistryRef.current ?? {}
+            const resolved = resolveDbFrames(dbFrames, registry)
+            setFrames(prev => {
+              // Preserve manual positions
+              return resolved.map(f => {
+                const existing = prev.find(p => p.id === f.id)
+                if (existing?.manuallyPositioned) {
+                  return { ...f, x: existing.x, y: existing.y, manuallyPositioned: true }
+                }
+                return f
+              })
+            })
+          })
+        }
+      } catch { /* ignore */ }
+    }
+
+    return () => source.close()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDbMode, persistConfig?.project])
+
+  // Sync when source frames actually change (page switch = different IDs) — manifest mode only
+  useEffect(() => {
+    if (isDbMode) return
+
     let cancelled = false
     positionsLoadedRef.current = false
 
@@ -137,7 +270,7 @@ export function useFrames(
     load()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceKey, persistConfig?.project, persistConfig?.page])
+  }, [isDbMode, sourceKey, persistConfig?.project, persistConfig?.page])
 
   // Listen for frame resize events (works without onResize prop)
   useEffect(() => {
@@ -166,16 +299,25 @@ export function useFrames(
     if (!positionsLoadedRef.current) return
     clearTimeout(persistRef.current)
     persistRef.current = setTimeout(() => {
-      if (persistConfigRef.current?.project && persistConfigRef.current?.page) {
+      const config = persistConfigRef.current
+      if (config?.project && config?.page) {
         savePositionsServer(
-          persistConfigRef.current.project,
-          persistConfigRef.current.page,
+          config.project,
+          config.page,
+          frames,
+          Array.from(deletedIdsRef.current)
+        )
+      } else if (config?.project && isDbMode) {
+        // DB mode: persist positions using project as page key
+        savePositionsServer(
+          config.project,
+          'canvas',
           frames,
           Array.from(deletedIdsRef.current)
         )
       }
     }, 300)
-  }, [frames])
+  }, [frames, isDbMode])
 
   // handleResize kept for backward compat (consumers passing onResize prop)
   const handleResize = useCallback((id: string, height: number) => {
@@ -212,12 +354,19 @@ export function useFrames(
   const removeFrame = useCallback((id: string) => {
     setFrames(prev => prev.filter(f => f.id !== id))
     delete measuredHeightsRef.current[id]
-    deletedIdsRef.current.add(id)
-    // Persist deletion immediately
-    if (persistConfigRef.current?.project && persistConfigRef.current?.page) {
-      deleteFrameServer(persistConfigRef.current.project, persistConfigRef.current.page, id)
+    const config = persistConfigRef.current
+    if (isDbMode && config?.project) {
+      // DB mode: soft-delete via API
+      fetch(`${SERVER_ENDPOINT}/frames/${encodeURIComponent(id)}?project=${encodeURIComponent(config.project)}`, {
+        method: 'DELETE',
+      }).catch(() => {})
+    } else {
+      deletedIdsRef.current.add(id)
+      if (config?.project && config?.page) {
+        deleteFrameServer(config.project, config.page, id)
+      }
     }
-  }, [])
+  }, [isDbMode])
 
   const getNextPosition = useCallback(() => {
     if (frames.length === 0) return { x: 100, y: 100 }

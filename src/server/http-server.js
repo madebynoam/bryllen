@@ -2,7 +2,7 @@
 
 import { createServer } from 'http'
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync } from 'fs'
-import { execSync } from 'child_process'
+import { spawn } from 'child_process'
 import { join } from 'path'
 import {
   initiateDeviceFlow,
@@ -47,6 +47,10 @@ import {
   updateProjectAnnotationProgress,
   deleteProjectAnnotation,
   closeProjectDbs,
+  createFrame,
+  getFrames,
+  updateFrame,
+  softDeleteFrame,
 } from './db.js'
 
 // --- Playwright (lazy) ---
@@ -220,28 +224,30 @@ function applyAllAnnotations(projectName) {
 }
 
 function autoCommit(projectName, annotation) {
+  // Fire-and-forget: spawn git in background, don't block HTTP response
   try {
-    // Check if there are staged or unstaged changes in src/projects/
-    const status = execSync('git status --porcelain src/projects/', { encoding: 'utf8' }).trim()
-    if (!status) return // nothing to commit
-
-    execSync('git add src/projects/', { stdio: 'ignore' })
-
-    const comment = (annotation.comment || '').slice(0, 72).replace(/'/g, "'\\''")
+    const comment = (annotation.comment || '').slice(0, 72).replace(/'/g, "\\'")
     const prefix = (annotation.type === 'iteration' || annotation.type === 'project') ? 'feat' : 'style'
     const msg = `${prefix}: annotation #${annotation.id} — ${comment}`
 
-    execSync(`git commit -m '${msg}'`, { stdio: 'ignore' })
-    console.log(`[bryllen] Auto-committed: ${msg}`)
+    // Use a shell script to check status, add, and commit atomically
+    const script = `git status --porcelain src/projects/ | grep -q . && git add src/projects/ && git commit -m '${msg}'`
+    const child = spawn('sh', ['-c', script], { stdio: 'ignore' })
+    child.unref() // detach from parent — don't block exit
 
-    // Notify SSE clients about the commit
-    for (const client of sseClients) {
-      if (!client.projectName || client.projectName === projectName) {
-        client.res.write(`data: ${JSON.stringify({ type: 'committed', id: annotation.id, message: msg })}\n\n`)
+    child.on('close', (code) => {
+      if (code === 0) {
+        console.log(`[bryllen] Auto-committed: ${msg}`)
+        for (const client of sseClients) {
+          if (!client.projectName || client.projectName === projectName) {
+            client.res.write(`data: ${JSON.stringify({ type: 'committed', id: annotation.id, message: msg })}\n\n`)
+          }
+        }
       }
-    }
+      // code !== 0 means nothing to commit or git unavailable — silent
+    })
   } catch {
-    // Silent — git not available, no repo, or nothing to commit
+    // Silent — git not available
   }
 }
 
@@ -1117,6 +1123,84 @@ const httpServer = createServer(async (req, res) => {
         closeBrowser()
         sendJson(res, 500, { error: `Screenshot failed: ${err.message}` })
       }
+      return
+    }
+
+    // ── Frames CRUD (DB-driven mode) ─────────────────────────────────────────
+
+    // POST /frames — create a new frame
+    if (req.method === 'POST' && url.pathname === '/frames') {
+      const data = await parseBody(req)
+      const { project, id, title, componentKey, src, props, width, height, sortOrder } = data
+
+      if (!project || !id || !title) {
+        sendJson(res, 400, { error: 'project, id, and title are required' })
+        return
+      }
+
+      const frame = createFrame(project, { id, title, componentKey, src, props, width, height, sortOrder })
+      // Notify SSE clients so canvas re-fetches
+      for (const client of sseClients) {
+        if (!client.projectName || client.projectName === project) {
+          client.res.write(`data: ${JSON.stringify({ type: 'frame-created', frameId: id })}\n\n`)
+        }
+      }
+      sendJson(res, 201, frame)
+      return
+    }
+
+    // GET /frames — list visible frames for a project
+    if (req.method === 'GET' && url.pathname === '/frames') {
+      const project = url.searchParams.get('project')
+      if (!project) {
+        sendJson(res, 400, { error: 'project query param is required' })
+        return
+      }
+      sendJson(res, 200, getFrames(project))
+      return
+    }
+
+    // PUT /frames/:id — update frame metadata
+    const framesUpdateMatch = url.pathname.match(/^\/frames\/([^/]+)$/)
+    if (req.method === 'PUT' && framesUpdateMatch) {
+      const project = url.searchParams.get('project')
+      const id = decodeURIComponent(framesUpdateMatch[1])
+      if (!project) {
+        sendJson(res, 400, { error: 'project query param is required' })
+        return
+      }
+      const updates = await parseBody(req)
+      const frame = updateFrame(project, id, updates)
+      if (!frame) {
+        sendJson(res, 404, { error: 'Frame not found' })
+        return
+      }
+      // Notify SSE clients
+      for (const client of sseClients) {
+        if (!client.projectName || client.projectName === project) {
+          client.res.write(`data: ${JSON.stringify({ type: 'frame-updated', frameId: id })}\n\n`)
+        }
+      }
+      sendJson(res, 200, frame)
+      return
+    }
+
+    // DELETE /frames/:id — soft delete
+    if (req.method === 'DELETE' && framesUpdateMatch) {
+      const project = url.searchParams.get('project')
+      const id = decodeURIComponent(framesUpdateMatch[1])
+      if (!project) {
+        sendJson(res, 400, { error: 'project query param is required' })
+        return
+      }
+      const result = softDeleteFrame(project, id)
+      // Notify SSE clients
+      for (const client of sseClients) {
+        if (!client.projectName || client.projectName === project) {
+          client.res.write(`data: ${JSON.stringify({ type: 'frame-deleted', frameId: id })}\n\n`)
+        }
+      }
+      sendJson(res, 200, result)
       return
     }
 

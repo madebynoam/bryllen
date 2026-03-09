@@ -17,7 +17,7 @@ import { UpdateDialog } from './UpdateDialog'
 import { checkForUpdate, getDismissedVersion } from './versionCheck'
 import { VERSION } from './version'
 import { InfoButton } from './InfoButton'
-import { D, E, S, T, R, FONT, DIM, V } from './tokens'
+import { A, D, E, S, T, R, FONT, DIM, V } from './tokens'
 import { ThemeProvider, useTheme } from './useTheme'
 import { TokenPanel, TokenPanelToggle } from './TokenPanel'
 import type { ProjectManifest, CanvasImageFrame, FrameStatus, ManifestFrame, CanvasFrame } from './types'
@@ -136,6 +136,7 @@ function StatusFilter({ visibleStatuses, onToggle, counts }: StatusFilterProps) 
             return (
               <label
                 key={opt.value}
+                onClick={() => !disabled && onToggle(opt.value)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -149,13 +150,27 @@ function StatusFilter({ visibleStatuses, onToggle, counts }: StatusFilterProps) 
                   color: V.txtPri,
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={disabled}
-                  onChange={() => onToggle(opt.value)}
-                  style={{ cursor: disabled ? 'not-allowed' : 'default' }}
-                />
+                <div
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 3,
+                    border: `1px solid ${checked ? A.accent : V.border}`,
+                    background: checked ? A.accent : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    cursor: disabled ? 'not-allowed' : 'default',
+                    transition: 'background 0.1s, border-color 0.1s',
+                  }}
+                >
+                  {checked && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5L4 7L8 3" stroke={D.text} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
                 <opt.icon size={14} fill={opt.fill} stroke={opt.stroke} strokeWidth={2} />
                 <span style={{ flex: 1 }}>{opt.label}</span>
                 <span style={{ color: V.txtSec }}>({counts[opt.value]})</span>
@@ -614,10 +629,18 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       .catch(() => setFrameStatuses({}))
   }, [activeProject?.project, annotationEndpoint])
 
+  const isDbMode = !!(activeProject?.components)
   const persistConfig = activeProject?.project
     ? { project: activeProject.project, page: 'canvas' }
     : undefined
-  const { frames, updateFrame, removeFrame, handleResize } = useFrames(layoutedFrames, activeProject?.grid, persistConfig)
+  // DB mode: pass undefined so useFrames fetches from /frames API
+  // Manifest mode: pass layoutedFrames as before
+  const { frames, updateFrame, removeFrame, handleResize } = useFrames(
+    isDbMode ? undefined : layoutedFrames,
+    activeProject?.grid,
+    persistConfig,
+    isDbMode ? activeProject.components : undefined,
+  )
 
   // Handle frame move with multi-select support
   const handleFrameMove = useCallback((id: string, newX: number, newY: number) => {

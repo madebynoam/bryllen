@@ -249,13 +249,7 @@ export function projectManifest({ name }) {
 const manifest: ProjectManifest = {
   id: '${id}',
   project: '${name}',
-  frames: [],
-  grid: {
-    columns: 4,
-    columnWidth: 320,
-    rowHeight: 200,
-    gap: 40,
-  },
+  components: {},
 }
 
 export default manifest

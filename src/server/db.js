@@ -77,6 +77,25 @@ export function initDb(bryllenDir) {
       PRIMARY KEY (project, page, frame_id)
     );
 
+    CREATE TABLE IF NOT EXISTS frames (
+      id TEXT NOT NULL,
+      project TEXT NOT NULL,
+      title TEXT NOT NULL,
+      component_key TEXT,
+      src TEXT,
+      props TEXT DEFAULT '{}',
+      width INTEGER,
+      height INTEGER,
+      sort_order INTEGER DEFAULT 0,
+      deleted_at INTEGER,
+      created_at INTEGER DEFAULT (strftime('%s', 'now')),
+      updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+      PRIMARY KEY (project, id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_frames_project
+      ON frames(project, deleted_at);
+
     CREATE INDEX IF NOT EXISTS idx_frame_positions_project_page
       ON frame_positions(project, page);
     CREATE INDEX IF NOT EXISTS idx_context_positions_project
@@ -384,6 +403,96 @@ function migrateOldData(bryllenDir) {
     } catch (err) {
       console.warn('[bryllen] Could not remove old frame-positions directory:', err.message)
     }
+  }
+}
+
+// ─── Frames (DB-driven mode) ──────────────────────────────────────────────────
+
+export function createFrame(project, { id, title, componentKey, src, props, width, height, sortOrder }) {
+  const now = Math.floor(Date.now() / 1000)
+  getDb().prepare(`
+    INSERT INTO frames (id, project, title, component_key, src, props, width, height, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(project, id) DO UPDATE SET
+      title = excluded.title,
+      component_key = excluded.component_key,
+      src = excluded.src,
+      props = excluded.props,
+      width = excluded.width,
+      height = excluded.height,
+      sort_order = excluded.sort_order,
+      deleted_at = NULL,
+      updated_at = excluded.updated_at
+  `).run(id, project, title, componentKey || null, src || null, JSON.stringify(props || {}), width || null, height || null, sortOrder || 0, now, now)
+
+  return getFrame(project, id)
+}
+
+export function getFrames(project) {
+  const rows = getDb().prepare(`
+    SELECT id, title, component_key, src, props, width, height, sort_order, created_at, updated_at
+    FROM frames
+    WHERE project = ? AND deleted_at IS NULL
+    ORDER BY sort_order ASC, created_at ASC
+  `).all(project)
+
+  return rows.map(rowToFrame)
+}
+
+export function getFrame(project, id) {
+  const row = getDb().prepare(`
+    SELECT id, title, component_key, src, props, width, height, sort_order, created_at, updated_at
+    FROM frames WHERE project = ? AND id = ? AND deleted_at IS NULL
+  `).get(project, id)
+  return row ? rowToFrame(row) : null
+}
+
+export function updateFrame(project, id, updates) {
+  const now = Math.floor(Date.now() / 1000)
+  const fields = []
+  const values = []
+
+  if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title) }
+  if (updates.componentKey !== undefined) { fields.push('component_key = ?'); values.push(updates.componentKey) }
+  if (updates.src !== undefined) { fields.push('src = ?'); values.push(updates.src) }
+  if (updates.props !== undefined) { fields.push('props = ?'); values.push(JSON.stringify(updates.props)) }
+  if (updates.width !== undefined) { fields.push('width = ?'); values.push(updates.width) }
+  if (updates.height !== undefined) { fields.push('height = ?'); values.push(updates.height) }
+  if (updates.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(updates.sortOrder) }
+
+  if (fields.length === 0) return getFrame(project, id)
+
+  fields.push('updated_at = ?')
+  values.push(now)
+  values.push(project, id)
+
+  getDb().prepare(`
+    UPDATE frames SET ${fields.join(', ')} WHERE project = ? AND id = ? AND deleted_at IS NULL
+  `).run(...values)
+
+  return getFrame(project, id)
+}
+
+export function softDeleteFrame(project, id) {
+  const now = Math.floor(Date.now() / 1000)
+  getDb().prepare(`
+    UPDATE frames SET deleted_at = ?, updated_at = ? WHERE project = ? AND id = ?
+  `).run(now, now, project, id)
+  return { id, project, deletedAt: now }
+}
+
+function rowToFrame(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    componentKey: row.component_key || null,
+    src: row.src || null,
+    props: JSON.parse(row.props || '{}'),
+    width: row.width || null,
+    height: row.height || null,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }
 

@@ -89,6 +89,8 @@ export interface ProjectManifest {
   project: string
   /** All frames displayed on the canvas (new flat structure) */
   frames?: ManifestFrame[]
+  /** DB-driven mode: maps component keys to React components (frames stored in SQLite) */
+  components?: Record<string, ComponentType<any>>
   /** DEPRECATED: Use frames array instead */
   iterations?: IterationManifest[]
   /** Grid layout config */

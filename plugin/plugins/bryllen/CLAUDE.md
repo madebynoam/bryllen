@@ -57,6 +57,43 @@ src/projects/<name>/
   CHANGELOG.md
 ```
 
+## Manifest formats (CRITICAL)
+
+There are two manifest modes. Check which one the project uses before editing.
+
+### DB-driven mode (new projects — `components: {}`)
+
+```ts
+const manifest: ProjectManifest = {
+  id: '...',
+  project: 'my-project',
+  components: {
+    'dir-a': DirA,       // maps frame ID → React component
+    'dir-b': DirB,
+  },
+}
+```
+
+**Frame metadata (title, width, height, order) lives in SQLite, NOT the manifest.**
+
+**Agent workflow in DB mode:**
+1. Create component file (`DirA.tsx`, etc.)
+2. Add ONE import + ONE entry to `manifest.components` (minimal manifest edit)
+3. `POST http://localhost:4748/frames` to register the frame:
+   ```json
+   { "project": "my-project", "id": "dir-a", "title": "Direction A", "componentKey": "dir-a", "width": 1440, "height": 900 }
+   ```
+4. Canvas receives SSE `frame-created` event and re-fetches — no Vite reload needed
+
+**CRUD operations (zero file edits):**
+- Delete: `DELETE http://localhost:4748/frames/dir-a?project=my-project`
+- Rename: `PUT http://localhost:4748/frames/dir-a?project=my-project` with `{ "title": "New Name" }`
+- Reorder: `PUT` with `{ "sortOrder": 2 }`
+
+### Manifest mode (existing projects — `frames: [...]`)
+
+Old format still works. Agent edits the `frames` array directly (triggers Vite reload). No migration needed — backward compat is preserved.
+
 ## Component hierarchy (MANDATORY — read this)
 
 ```
@@ -78,7 +115,9 @@ Pages (v<N>/pages/)           → import ONLY from ../components/
    - Add export to `v<N>/components/index.ts`
    - Add to Components showcase page
 3. **THEN create the page** — import components from `../components/`
-4. **Add page to manifest** — reference the page component
+4. **Register in manifest:**
+   - **DB mode** (`components: {}`): Add import + entry to `manifest.components`, then `POST /frames`
+   - **Manifest mode** (`frames: []`): Add frame object to `frames` array directly
 
 ### Example — Dashboard with cards:
 
@@ -185,16 +224,38 @@ Frames are auto-positioned using a **grid layout**. The `grid.columns` setting c
 
 **WRONG:** Add DirA to manifest → wait → add DirB to manifest → wait → add DirC to manifest
 
-### Manifest example (CORRECT — 3 frames, 3+ columns = horizontal)
+### Manifest example — DB mode (new projects, PREFERRED)
+```ts
+// manifest.ts — only component registry, no frame metadata
+import { DirA } from './v1/pages/DirA'
+import { DirB } from './v1/pages/DirB'
+import { DirC } from './v1/pages/DirC'
+
+const manifest: ProjectManifest = {
+  id: '...',
+  project: 'my-project',
+  components: {
+    'dir-a': DirA,
+    'dir-b': DirB,
+    'dir-c': DirC,
+  },
+}
+```
+Then register frames via API:
+```bash
+curl -X POST http://localhost:4748/frames -H 'Content-Type: application/json' \
+  -d '{"project":"my-project","id":"dir-a","title":"Direction A","componentKey":"dir-a","width":1440,"height":900}'
+```
+
+### Manifest example — manifest mode (old projects, backward compat)
 ```ts
 {
-  name: 'All Directions',
-  grid: { columns: 3, columnWidth: 1440, rowHeight: 900, gap: 40 },
   frames: [
     { id: 'dir-a', title: 'Direction A', component: DirA, width: 1440, height: 900 },
     { id: 'dir-b', title: 'Direction B', component: DirB, width: 1440, height: 900 },
     { id: 'dir-c', title: 'Direction C', component: DirC, width: 1440, height: 900 },
   ],
+  grid: { columns: 3, columnWidth: 1440, rowHeight: 900, gap: 40 },
 }
 ```
 
