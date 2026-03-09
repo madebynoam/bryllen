@@ -538,50 +538,6 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }).catch(() => {})
   }, [activeProject?.project, annotationEndpoint])
 
-  // Keyboard shortcuts: Escape to clear selection, S/A/R/N for batch status change, Backspace/Delete to remove
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-
-      if (e.key === 'Escape' && selectedFrameIds.size > 0) {
-        setSelectedFrameIds(new Set())
-        return
-      }
-
-      // Actions requiring selection
-      if (selectedFrameIds.size === 0) return
-
-      // Delete selected frames with Backspace or Delete
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault()
-        for (const frameId of selectedFrameIds) {
-          removeFrame(frameId)
-        }
-        setSelectedFrameIds(new Set())
-        return
-      }
-
-      // Batch status change shortcuts
-      const statusMap: Record<string, FrameStatus> = {
-        's': 'starred',
-        'a': 'approved',
-        'r': 'rejected',
-        'n': 'none',
-      }
-      const status = statusMap[e.key.toLowerCase()]
-      if (status) {
-        e.preventDefault()
-        for (const frameId of selectedFrameIds) {
-          handleFrameStatusChange(frameId, status)
-        }
-        setSelectedFrameIds(new Set()) // Clear selection after action
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedFrameIds, handleFrameStatusChange, removeFrame])
-
   // Handle frame selection (shift+click toggles)
   const handleFrameSelect = useCallback((frameId: string, shiftKey: boolean) => {
     if (shiftKey) {
@@ -682,6 +638,50 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     ? { project: activeProject.project, page: 'canvas' }
     : undefined
   const { frames, updateFrame, removeFrame, handleResize } = useFrames(layoutedFrames, activeProject?.grid, persistConfig)
+
+  // Keyboard shortcuts: Escape to clear selection, S/A/R/N for batch status change, Backspace/Delete to remove
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+      if (e.key === 'Escape' && selectedFrameIds.size > 0) {
+        setSelectedFrameIds(new Set())
+        return
+      }
+
+      // Actions requiring selection
+      if (selectedFrameIds.size === 0) return
+
+      // Delete selected frames with Backspace or Delete
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault()
+        for (const frameId of selectedFrameIds) {
+          removeFrame(frameId)
+        }
+        setSelectedFrameIds(new Set())
+        return
+      }
+
+      // Batch status change shortcuts
+      const statusMap: Record<string, FrameStatus> = {
+        's': 'starred',
+        'a': 'approved',
+        'r': 'rejected',
+        'n': 'none',
+      }
+      const status = statusMap[e.key.toLowerCase()]
+      if (status) {
+        e.preventDefault()
+        for (const frameId of selectedFrameIds) {
+          handleFrameStatusChange(frameId, status)
+        }
+        setSelectedFrameIds(new Set()) // Clear selection after action
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedFrameIds, handleFrameStatusChange, removeFrame])
 
   // Calculate status counts for filter
   const statusCounts = useMemo(() => {
