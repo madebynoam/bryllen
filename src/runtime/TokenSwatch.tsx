@@ -5,7 +5,7 @@ import { ColorPicker } from './ColorPicker'
 import { oklchToDisplayHex } from './colorUtils'
 import { useTokenOverride } from './Canvas'
 
-const ENDPOINT = `http://localhost:${__BRYLLEN_HTTP_PORT__ ?? 4748}`
+const ENDPOINT = `http://localhost:${typeof __BRYLLEN_HTTP_PORT__ !== 'undefined' ? __BRYLLEN_HTTP_PORT__ : 4748}`
 
 export interface TokenSwatchProps {
   /** CSS color string for display */

@@ -4,7 +4,7 @@ import { A, S, R, T, FONT, V } from './tokens'
 import { TokenSlider } from './TokenSlider'
 import { useTokenOverride } from './Canvas'
 
-const ENDPOINT = `http://localhost:${__BRYLLEN_HTTP_PORT__ ?? 4748}`
+const ENDPOINT = `http://localhost:${typeof __BRYLLEN_HTTP_PORT__ !== 'undefined' ? __BRYLLEN_HTTP_PORT__ : 4748}`
 
 export interface RadiusTokenProps {
   value: number

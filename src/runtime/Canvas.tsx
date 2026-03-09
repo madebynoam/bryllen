@@ -3,7 +3,7 @@ import { S, R, T } from './tokens'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 5
-const ENDPOINT = `http://localhost:${__BRYLLEN_HTTP_PORT__ ?? 4748}`
+const ENDPOINT = `http://localhost:${typeof __BRYLLEN_HTTP_PORT__ !== 'undefined' ? __BRYLLEN_HTTP_PORT__ : 4748}`
 
 // Viewport and canvas background are stored in SQLite via HTTP server
 // These are async but we provide sync wrappers for backward compat
