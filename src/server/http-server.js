@@ -31,6 +31,8 @@ import {
   initDb,
   getFramePositions,
   saveFramePositions,
+  getDeletedFrames,
+  addDeletedFrame,
   getContextPositions,
   saveContextPositions,
   getPreference,
@@ -953,7 +955,23 @@ const httpServer = createServer(async (req, res) => {
       }
 
       const positions = getFramePositions(project, page)
-      sendJson(res, 200, { positions })
+      const deletedIds = getDeletedFrames(project, page)
+      sendJson(res, 200, { positions, deletedIds })
+      return
+    }
+
+    // POST /frame-positions/delete — mark a frame as deleted
+    if (req.method === 'POST' && url.pathname === '/frame-positions/delete') {
+      const data = await parseBody(req)
+      const { project, page, frameId } = data
+
+      if (!project || !page || !frameId) {
+        sendJson(res, 400, { error: 'project, page, and frameId are required' })
+        return
+      }
+
+      addDeletedFrame(project, page, frameId)
+      sendJson(res, 200, { deleted: true, frameId })
       return
     }
 

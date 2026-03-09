@@ -9,25 +9,42 @@ function frameIdsKey(frames: CanvasFrame[]): string {
   return frames.map(f => f.id).join(',')
 }
 
-async function loadPositionsServer(project: string, page: string): Promise<Record<string, { x: number; y: number; manuallyPositioned?: boolean }> | null> {
+interface SavedFrameData {
+  positions: Record<string, { x: number; y: number; manuallyPositioned?: boolean }> | null
+  deletedIds: string[]
+}
+
+async function loadFrameDataServer(project: string, page: string): Promise<SavedFrameData> {
   try {
     const res = await fetch(`${SERVER_ENDPOINT}/frame-positions?project=${encodeURIComponent(project)}&page=${encodeURIComponent(page)}`)
     const data = await res.json()
-    return data.positions || null
+    return {
+      positions: data.positions || null,
+      deletedIds: data.deletedIds || [],
+    }
   } catch {
-    return null
+    return { positions: null, deletedIds: [] }
   }
 }
 
-async function savePositionsServer(project: string, page: string, frames: CanvasFrame[]) {
-  if (frames.length === 0) return
+async function savePositionsServer(project: string, page: string, frames: CanvasFrame[], deletedIds: string[]) {
   const positions: Record<string, { x: number; y: number; manuallyPositioned?: boolean }> = {}
   for (const f of frames) positions[f.id] = { x: f.x, y: f.y, manuallyPositioned: f.manuallyPositioned }
   try {
     await fetch(`${SERVER_ENDPOINT}/frame-positions`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project, page, positions }),
+      body: JSON.stringify({ project, page, positions, deletedIds }),
+    })
+  } catch {}
+}
+
+async function deleteFrameServer(project: string, page: string, frameId: string) {
+  try {
+    await fetch(`${SERVER_ENDPOINT}/frame-positions/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project, page, frameId }),
     })
   } catch {}
 }
@@ -51,6 +68,7 @@ export function useFrames(
 ) {
   const [frames, setFrames] = useState<CanvasFrame[]>(sourceFrames)
   const measuredHeightsRef = useRef<Record<string, number>>({})
+  const deletedIdsRef = useRef<Set<string>>(new Set())
   const rafRef = useRef<number>(0)
   const gridConfigRef = useRef(gridConfig)
   gridConfigRef.current = gridConfig
@@ -79,20 +97,26 @@ export function useFrames(
 
     async function load() {
       const base = sourceFramesRef.current
-      let saved: Record<string, { x: number; y: number; manuallyPositioned?: boolean }> | null = null
+      let saved: SavedFrameData = { positions: null, deletedIds: [] }
 
       // Load from server (SQLite)
       if (persistConfigRef.current?.project && persistConfigRef.current?.page) {
-        saved = await loadPositionsServer(persistConfigRef.current.project, persistConfigRef.current.page)
+        saved = await loadFrameDataServer(persistConfigRef.current.project, persistConfigRef.current.page)
       }
 
       if (cancelled) return
 
+      // Store deleted IDs for future saves
+      deletedIdsRef.current = new Set(saved.deletedIds)
+
+      // Filter out deleted frames
+      const filtered = base.filter(f => !deletedIdsRef.current.has(f.id))
+
       // Only apply saved positions for frames that were MANUALLY positioned by the user.
       // Non-manual frames should use the calculated layout position to avoid stale/bad positions.
-      const merged = saved
-        ? base.map(f => {
-            const savedPos = saved![f.id]
+      const merged = saved.positions
+        ? filtered.map(f => {
+            const savedPos = saved.positions![f.id]
             if (savedPos && savedPos.manuallyPositioned) {
               return {
                 ...f,
@@ -103,7 +127,7 @@ export function useFrames(
             }
             return f
           })
-        : base
+        : filtered
 
       setFrames(merged)
       measuredHeightsRef.current = {}
@@ -143,7 +167,12 @@ export function useFrames(
     clearTimeout(persistRef.current)
     persistRef.current = setTimeout(() => {
       if (persistConfigRef.current?.project && persistConfigRef.current?.page) {
-        savePositionsServer(persistConfigRef.current.project, persistConfigRef.current.page, frames)
+        savePositionsServer(
+          persistConfigRef.current.project,
+          persistConfigRef.current.page,
+          frames,
+          Array.from(deletedIdsRef.current)
+        )
       }
     }, 300)
   }, [frames])
@@ -183,6 +212,11 @@ export function useFrames(
   const removeFrame = useCallback((id: string) => {
     setFrames(prev => prev.filter(f => f.id !== id))
     delete measuredHeightsRef.current[id]
+    deletedIdsRef.current.add(id)
+    // Persist deletion immediately
+    if (persistConfigRef.current?.project && persistConfigRef.current?.page) {
+      deleteFrameServer(persistConfigRef.current.project, persistConfigRef.current.page, id)
+    }
   }, [])
 
   const getNextPosition = useCallback(() => {

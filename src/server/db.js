@@ -69,12 +69,22 @@ export function initDb(bryllenDir) {
       PRIMARY KEY (project, frame_id)
     );
 
+    CREATE TABLE IF NOT EXISTS deleted_frames (
+      project TEXT NOT NULL,
+      page TEXT NOT NULL,
+      frame_id TEXT NOT NULL,
+      deleted_at INTEGER DEFAULT (strftime('%s', 'now')),
+      PRIMARY KEY (project, page, frame_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_frame_positions_project_page
       ON frame_positions(project, page);
     CREATE INDEX IF NOT EXISTS idx_context_positions_project
       ON context_positions(project, iteration);
     CREATE INDEX IF NOT EXISTS idx_frame_status_project
       ON frame_status(project);
+    CREATE INDEX IF NOT EXISTS idx_deleted_frames_project_page
+      ON deleted_frames(project, page);
   `)
 
   // Add manually_positioned column if it doesn't exist (migration for existing DBs)
@@ -145,6 +155,30 @@ export function clearFramePositions(project, page) {
   getDb().prepare(`
     DELETE FROM frame_positions WHERE project = ? AND page = ?
   `).run(project, page)
+}
+
+// ─── Deleted Frames ──────────────────────────────────────────────────────────
+
+export function getDeletedFrames(project, page) {
+  const rows = getDb().prepare(`
+    SELECT frame_id FROM deleted_frames
+    WHERE project = ? AND page = ?
+  `).all(project, page)
+
+  return rows.map(row => row.frame_id)
+}
+
+export function addDeletedFrame(project, page, frameId) {
+  getDb().prepare(`
+    INSERT OR IGNORE INTO deleted_frames (project, page, frame_id)
+    VALUES (?, ?, ?)
+  `).run(project, page, frameId)
+}
+
+export function removeDeletedFrame(project, page, frameId) {
+  getDb().prepare(`
+    DELETE FROM deleted_frames WHERE project = ? AND page = ? AND frame_id = ?
+  `).run(project, page, frameId)
 }
 
 // ─── Context Positions ───────────────────────────────────────────────────────
