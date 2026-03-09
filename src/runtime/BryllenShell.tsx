@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react'
-import { X, Star, Check } from 'lucide-react'
+import { X, Star, Check, ChevronDown } from 'lucide-react'
 import { Canvas } from './Canvas'
 import { Frame } from './Frame'
 import { useFrames } from './useFrames'
@@ -59,7 +59,7 @@ function buildUrl(project: string): string {
   return `/${encodeURIComponent(project)}`
 }
 
-/* ── Frame Status Filter (Toggle Chips) ── */
+/* ── Frame Status Filter (Dropdown with Checkboxes) ── */
 
 interface StatusFilterProps {
   visibleStatuses: Set<FrameStatus>
@@ -67,81 +67,103 @@ interface StatusFilterProps {
   counts: Record<FrameStatus, number>
 }
 
-const STATUS_CHIPS: Array<{ value: FrameStatus; label: string; icon: typeof Star; fill: string; stroke: string }> = [
+const STATUS_OPTIONS: Array<{ value: FrameStatus; label: string; icon: typeof Star; fill: string; stroke: string }> = [
   { value: 'none', label: 'None', icon: Star, fill: 'none', stroke: '#999' },
   { value: 'starred', label: 'Starred', icon: Star, fill: '#F59E0B', stroke: '#F59E0B' },
   { value: 'approved', label: 'Approved', icon: Check, fill: 'none', stroke: '#10B981' },
   { value: 'rejected', label: 'Rejected', icon: X, fill: 'none', stroke: '#EF4444' },
 ]
 
-function StatusFilterChip({ chip, active, onClick, count, disabled }: {
-  chip: typeof STATUS_CHIPS[number]
-  active: boolean
-  onClick: () => void
-  count: number
-  disabled: boolean
-}) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      disabled={disabled}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '4px 8px',
-        background: active ? V.card : 'transparent',
-        border: `1px solid ${active ? V.border : 'transparent'}`,
-        borderRadius: R.ui, cornerShape: 'squircle',
-        cursor: disabled ? 'not-allowed' : 'default',
-        fontSize: T.ui,
-        fontFamily: FONT,
-        color: active ? V.txtPri : V.txtSec,
-        opacity: disabled ? 0.5 : hovered ? 0.8 : 1,
-        transition: 'all 0.15s ease',
-        boxShadow: active ? V.shadow : 'none',
-      } as React.CSSProperties}
-    >
-      <chip.icon
-        size={12}
-        fill={active ? chip.fill : 'none'}
-        stroke={active ? chip.stroke : V.txtSec}
-        strokeWidth={2}
-      />
-      <span>{chip.label}</span>
-      <span style={{ color: V.txtSec, fontSize: T.ui - 1 }}>({count})</span>
-    </button>
-  )
-}
-
 function StatusFilter({ visibleStatuses, onToggle, counts }: StatusFilterProps) {
-  // Prevent unchecking the last remaining status
+  const [open, setOpen] = useState(false)
   const activeCount = visibleStatuses.size
+  const totalVisible = Array.from(visibleStatuses).reduce((sum, s) => sum + counts[s], 0)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handleClick = () => setOpen(false)
+    const timer = setTimeout(() => window.addEventListener('click', handleClick), 0)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('click', handleClick)
+    }
+  }, [open])
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-      padding: 4,
-      background: 'oklch(0.5 0 0 / 0.1)',
-      borderRadius: R.ui, cornerShape: 'squircle',
-      pointerEvents: 'auto',
-      backdropFilter: 'blur(8px)',
-    } as React.CSSProperties}>
-      {STATUS_CHIPS.map(chip => (
-        <StatusFilterChip
-          key={chip.value}
-          chip={chip}
-          active={visibleStatuses.has(chip.value)}
-          onClick={() => onToggle(chip.value)}
-          count={counts[chip.value]}
-          disabled={visibleStatuses.has(chip.value) && activeCount === 1}
-        />
-      ))}
+    <div style={{ position: 'relative', pointerEvents: 'auto' }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o) }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 10px',
+          background: V.card,
+          border: `1px solid ${V.border}`,
+          borderRadius: R.ui, cornerShape: 'squircle',
+          fontSize: T.ui,
+          fontFamily: FONT,
+          color: V.txtPri,
+          cursor: 'default',
+          boxShadow: V.shadow,
+        } as React.CSSProperties}
+      >
+        <span>Filter</span>
+        <span style={{ color: V.txtSec }}>({totalVisible})</span>
+        <ChevronDown size={12} style={{ marginLeft: 2, color: V.txtSec }} />
+      </button>
+      {open && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: 4,
+            background: V.card,
+            border: `1px solid ${V.border}`,
+            borderRadius: R.ui, cornerShape: 'squircle',
+            boxShadow: V.shadow,
+            padding: 4,
+            zIndex: 1000,
+            minWidth: 160,
+          } as React.CSSProperties}
+        >
+          {STATUS_OPTIONS.map(opt => {
+            const checked = visibleStatuses.has(opt.value)
+            const disabled = checked && activeCount === 1
+            return (
+              <label
+                key={opt.value}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 8px',
+                  borderRadius: 4,
+                  cursor: disabled ? 'not-allowed' : 'default',
+                  opacity: disabled ? 0.5 : 1,
+                  fontSize: T.ui,
+                  fontFamily: FONT,
+                  color: V.txtPri,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => onToggle(opt.value)}
+                  style={{ cursor: disabled ? 'not-allowed' : 'default' }}
+                />
+                <opt.icon size={14} fill={opt.fill} stroke={opt.stroke} strokeWidth={2} />
+                <span style={{ flex: 1 }}>{opt.label}</span>
+                <span style={{ color: V.txtSec }}>({counts[opt.value]})</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
