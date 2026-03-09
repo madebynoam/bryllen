@@ -61,6 +61,36 @@ async function httpPostJson(path, body) {
 
 // ─── Annotation CLI commands ────────────────────────────────────────────────
 
+/**
+ * Detect the active project from src/projects/
+ * Returns project name if exactly one exists, null if none, or errors if multiple.
+ */
+function detectProject(args) {
+  // Check for explicit --project flag
+  const projectIdx = args.indexOf('--project')
+  if (projectIdx !== -1 && args[projectIdx + 1]) {
+    return args[projectIdx + 1]
+  }
+
+  // Auto-detect from src/projects/
+  const projectsDir = join(process.cwd(), 'src', 'projects')
+  if (!existsSync(projectsDir)) return null
+
+  const projects = readdirSync(projectsDir).filter(f => {
+    try {
+      const p = join(projectsDir, f)
+      return existsSync(p) && statSync(p).isDirectory() && !f.startsWith('.')
+    } catch { return false }
+  })
+
+  if (projects.length === 1) return projects[0]
+  if (projects.length > 1) {
+    console.error(JSON.stringify({ error: 'Multiple projects. Use --project <name>', projects }))
+    process.exit(1)
+  }
+  return null
+}
+
 async function watchAnnotations() {
   const args = process.argv.slice(3)
   let timeout = 15000
@@ -69,8 +99,13 @@ async function watchAnnotations() {
     timeout = parseInt(args[timeoutIdx + 1], 10) * 1000
   }
 
+  const project = detectProject(args)
+  const params = new URLSearchParams()
+  params.set('timeout', String(timeout))
+  if (project) params.set('projectId', project)
+
   try {
-    const result = await httpGet(`/annotations/next?timeout=${timeout}`)
+    const result = await httpGet(`/annotations/next?${params}`)
 
     if (result.timeout) {
       console.log(JSON.stringify({ timeout: true }))
@@ -89,7 +124,7 @@ async function resolveAnnotation() {
   const args = process.argv.slice(3)
   const id = args.find(a => !a.startsWith('--'))
   if (!id) {
-    console.error('Usage: bryllen resolve <id> [--navigate <iteration>]')
+    console.error('Usage: bryllen resolve <id> [--navigate <iteration>] [--project <name>]')
     process.exit(1)
   }
 
@@ -97,9 +132,14 @@ async function resolveAnnotation() {
   const navIdx = args.indexOf('--navigate')
   const navigate = navIdx !== -1 && args[navIdx + 1] ? args[navIdx + 1] : null
 
+  const project = detectProject(args)
+  const params = new URLSearchParams()
+  if (project) params.set('projectId', project)
+  const qs = params.toString() ? `?${params}` : ''
+
   try {
     const body = navigate ? { navigate } : {}
-    const result = await httpPostJson(`/annotations/${id}/resolve`, body)
+    const result = await httpPostJson(`/annotations/${id}/resolve${qs}`, body)
     if (result.error) {
       console.error(JSON.stringify({ error: `Annotation #${id} not found` }))
       process.exit(1)
@@ -112,15 +152,30 @@ async function resolveAnnotation() {
 }
 
 async function progressAnnotation() {
-  const id = process.argv[3]
-  const message = process.argv.slice(4).join(' ')
+  const args = process.argv.slice(3)
+  // Find id (first non-flag argument)
+  const id = args.find(a => !a.startsWith('--') && args.indexOf(a) === args.findIndex(x => !x.startsWith('--')))
+  // Get message (remaining non-flag arguments after id, excluding --project value)
+  const projectIdx = args.indexOf('--project')
+  const filteredArgs = args.filter((a, i) => {
+    if (a.startsWith('--')) return false
+    if (projectIdx !== -1 && i === projectIdx + 1) return false
+    return true
+  })
+  const message = filteredArgs.slice(1).join(' ')
+
   if (!id || !message) {
-    console.error('Usage: bryllen progress <id> <message>')
+    console.error('Usage: bryllen progress <id> <message> [--project <name>]')
     process.exit(1)
   }
 
+  const project = detectProject(args)
+  const params = new URLSearchParams()
+  if (project) params.set('projectId', project)
+  const qs = params.toString() ? `?${params}` : ''
+
   try {
-    const result = await httpPostJson(`/annotations/${id}/progress`, { message })
+    const result = await httpPostJson(`/annotations/${id}/progress${qs}`, { message })
     if (result.error) {
       console.error(JSON.stringify({ error: result.error }))
       process.exit(1)
@@ -133,8 +188,14 @@ async function progressAnnotation() {
 }
 
 async function pendingAnnotations() {
+  const args = process.argv.slice(3)
+  const project = detectProject(args)
+  const params = new URLSearchParams()
+  params.set('status', 'pending')
+  if (project) params.set('projectId', project)
+
   try {
-    const pending = await httpGet('/annotations?status=pending')
+    const pending = await httpGet(`/annotations?${params}`)
     console.log(JSON.stringify(pending, null, 2))
   } catch (err) {
     console.error(JSON.stringify({ error: err.message, hint: 'Is bryllen design running?' }))
@@ -143,8 +204,14 @@ async function pendingAnnotations() {
 }
 
 async function listAnnotations() {
+  const args = process.argv.slice(3)
+  const project = detectProject(args)
+  const params = new URLSearchParams()
+  if (project) params.set('projectId', project)
+  const qs = params.toString() ? `?${params}` : ''
+
   try {
-    const all = await httpGet('/annotations')
+    const all = await httpGet(`/annotations${qs}`)
     console.log(JSON.stringify(all, null, 2))
   } catch (err) {
     console.error(JSON.stringify({ error: err.message, hint: 'Is bryllen design running?' }))
@@ -712,14 +779,21 @@ switch (command) {
     console.log('  bryllen doctor               Check and fix project files')
     console.log('')
     console.log('Annotation commands (for Claude Code agent):')
-    console.log('  bryllen watch [--timeout N]  Wait for annotation (default 15s)')
-    console.log('  bryllen resolve <id> [--navigate <iter>]  Mark resolved, optionally navigate UI')
-    console.log('  bryllen progress <id> <msg>  Update progress shown on canvas')
-    console.log('  bryllen pending              List pending annotations')
-    console.log('  bryllen list                 List all annotations')
+    console.log('  bryllen watch [--timeout N] [--project <name>]')
+    console.log('                               Wait for annotation (default 15s)')
+    console.log('  bryllen resolve <id> [--navigate <iter>] [--project <name>]')
+    console.log('                               Mark resolved, optionally navigate UI')
+    console.log('  bryllen progress <id> <msg> [--project <name>]')
+    console.log('                               Update progress shown on canvas')
+    console.log('  bryllen pending [--project <name>]')
+    console.log('                               List pending annotations')
+    console.log('  bryllen list [--project <name>]')
+    console.log('                               List all annotations')
     console.log('  bryllen screenshot [--project <name>] [--iteration <v>] [--page <name>] [--frame <id>] [--delay <ms>]')
     console.log('  bryllen context [--project <name>] [--iteration <v>]')
     console.log('  bryllen iterate [--project <name>]  Create new iteration (freeze + copy)')
+    console.log('')
+    console.log('Note: --project auto-detects if only one project exists in src/projects/')
     console.log('')
     console.log('  bryllen help                 Show this message')
     process.exit(command === 'help' ? 0 : 1)

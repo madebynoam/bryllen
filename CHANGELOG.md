@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.117 — Fix annotation CLI projectId mismatch
+
+**Fixed annotations not being processed by agent:** CLI commands (`watch`, `pending`, `list`, `progress`, `resolve`) were not passing `projectId` to the HTTP server, causing them to query a global fallback database instead of the project-specific database where annotations were actually saved.
+
+- **Root cause:** Frontend saved annotations with `projectId` to project-specific SQLite, but CLI commands queried without `projectId` → different database
+- **Fix:** All annotation CLI commands now auto-detect the project (or accept `--project` flag) and pass `projectId` to the HTTP server
+- **Impact:** Designer can add multiple annotations and agent will see ALL of them, not just one
+
 ## 0.0.108 — Fix frame position persistence
 
 **Fixed overlapping frames bug:** Saved positions were being applied to ALL frames, even those not manually positioned. This caused stale/incorrect positions to persist across sessions.
