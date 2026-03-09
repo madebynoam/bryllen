@@ -322,7 +322,7 @@ Before generating designs, run:
 node node_modules/bryllen/src/cli/index.js context --project my-project --iteration v1
 ```
 
-This returns image paths. Read them with the Read tool to analyze via Vision. Look for:
+This returns image paths **sorted newest-first**. The first image in the list is the most recently added — use it as the primary reference. Older images (e.g. from previous sessions) appear later in the list. Read them with the Read tool to analyze via Vision. Look for:
 - Color palettes and usage patterns
 - Typography styles and hierarchy
 - Layout patterns and spacing

@@ -473,16 +473,21 @@ async function contextImages() {
     return
   }
 
-  const files = readdirSync(contextDir).filter(f =>
-    /\.(png|jpg|jpeg|gif|webp)$/i.test(f)
-  )
+  const files = readdirSync(contextDir)
+    .filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f))
+    .sort((a, b) => {
+      // Extract timestamp from filename (e.g. context-1773096113088.png → 1773096113088)
+      const tsA = parseInt(a.match(/(\d{10,})/)?.[1] ?? '0', 10)
+      const tsB = parseInt(b.match(/(\d{10,})/)?.[1] ?? '0', 10)
+      return tsB - tsA // newest first
+    })
 
   if (files.length === 0) {
     console.log(JSON.stringify({ images: [], message: 'No context images found' }))
     return
   }
 
-  // Return image paths (not base64 — Claude can read files directly)
+  // Return image paths sorted newest-first (not base64 — Claude can read files directly)
   const images = files.map(filename => ({
     filename,
     path: join(contextDir, filename),
