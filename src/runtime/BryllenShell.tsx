@@ -519,7 +519,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
   }, [annotationEndpoint, showToast, promptRequest])
 
-  // SSE listener for prompt-requested and update-started events
+  // SSE listener for annotation events, sticky events, and update events
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -530,6 +530,16 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         if (data.type === 'update-started') {
           setIsUpdating(true)
           setUpdateDialogOpen(false)
+          return
+        }
+        if (data.type === 'sticky-created' || data.type === 'sticky-deleted') {
+          const project = activeProjectNameRef.current
+          if (project) {
+            fetch(`${annotationEndpoint}/stickies?project=${encodeURIComponent(project)}`)
+              .then(r => r.json())
+              .then(d => setStickies(Array.isArray(d) ? d : []))
+              .catch(() => {})
+          }
           return
         }
         if (data.type === 'prompt-requested' && data.id) {
@@ -659,6 +669,41 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   // Frame selection state (multi-select)
   const [selectedFrameIds, setSelectedFrameIds] = useState<Set<string>>(new Set())
 
+  // Stickies state
+  const [stickies, setStickies] = useState<CanvasSticky[]>([])
+  const [selectedStickyIds, setSelectedStickyIds] = useState<Set<string>>(new Set())
+  const [stickiesVisible, setStickiesVisible] = useState<boolean>(() =>
+    loadStickiesVisible(activeProject?.project ?? '')
+  )
+
+  // Reload stickiesVisible when project changes
+  useEffect(() => {
+    setStickiesVisible(loadStickiesVisible(activeProject?.project ?? ''))
+  }, [activeProject?.project])
+
+  // Persist stickiesVisible whenever it changes
+  useEffect(() => {
+    if (!activeProject?.project) return
+    try {
+      localStorage.setItem(stickiesVisibleKey(activeProject.project), String(stickiesVisible))
+    } catch {}
+  }, [stickiesVisible, activeProject?.project])
+
+  // Load stickies when project changes
+  useEffect(() => {
+    if (!activeProject?.project) return
+    fetch(`${annotationEndpoint}/stickies?project=${encodeURIComponent(activeProject.project)}`)
+      .then(r => r.json())
+      .then(data => setStickies(Array.isArray(data) ? data : []))
+      .catch(() => setStickies([]))
+  }, [activeProject?.project, annotationEndpoint])
+
+  // Ref to track current project name for SSE handler (avoids stale closure)
+  const activeProjectNameRef = useRef(activeProject?.project ?? '')
+  useEffect(() => {
+    activeProjectNameRef.current = activeProject?.project ?? ''
+  }, [activeProject?.project])
+
   // Handle frame status change
   const handleFrameStatusChange = useCallback((frameId: string, status: FrameStatus) => {
     if (!activeProject?.project) return
@@ -693,9 +738,24 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
   }, [])
 
+  // Handle sticky selection (shift+click toggles)
+  const handleStickySelect = useCallback((id: string, shiftKey: boolean) => {
+    if (shiftKey) {
+      setSelectedStickyIds(prev => {
+        const next = new Set(prev)
+        if (next.has(id)) { next.delete(id) } else { next.add(id) }
+        return next
+      })
+    } else {
+      setSelectedStickyIds(new Set([id]))
+      setSelectedFrameIds(new Set()) // clear frame selection
+    }
+  }, [])
+
   // Clear selection when clicking canvas background
   const handleCanvasClick = useCallback(() => {
     setSelectedFrameIds(new Set())
+    setSelectedStickyIds(new Set())
   }, [])
 
   // Multi-select drag state: tracks the starting positions when a drag begins
@@ -812,12 +872,26 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       // Ignore if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
-      if (e.key === 'Escape' && selectedFrameIds.size > 0) {
+      if (e.key === 'Escape' && (selectedFrameIds.size > 0 || selectedStickyIds.size > 0)) {
         setSelectedFrameIds(new Set())
+        setSelectedStickyIds(new Set())
         return
       }
 
-      // Actions requiring selection
+      // Delete selected stickies with Backspace or Delete
+      if ((e.key === 'Backspace' || e.key === 'Delete') && selectedStickyIds.size > 0) {
+        e.preventDefault()
+        const project = activeProjectNameRef.current
+        for (const stickyId of selectedStickyIds) {
+          fetch(`${annotationEndpoint}/stickies/${encodeURIComponent(stickyId)}?project=${encodeURIComponent(project)}`, {
+            method: 'DELETE',
+          }).catch(() => {})
+        }
+        setSelectedStickyIds(new Set())
+        return
+      }
+
+      // Actions requiring frame selection
       if (selectedFrameIds.size === 0) return
 
       // Delete selected frames with Backspace or Delete
@@ -848,7 +922,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedFrameIds, handleFrameStatusChange, removeFrame])
+  }, [selectedFrameIds, selectedStickyIds, handleFrameStatusChange, removeFrame, annotationEndpoint])
 
   // Calculate status counts for filter
   const statusCounts = useMemo(() => {
@@ -864,6 +938,31 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
     return counts
   }, [frames, frameStatuses])
+
+  // Frames currently visible (pass status filter)
+  const visibleFrames = useMemo(() =>
+    frames.filter(f => visibleStatuses.has(frameStatuses[f.id] || 'none')),
+    [frames, frameStatuses, visibleStatuses]
+  )
+
+  // Compute absolute positions for visible stickies
+  const visibleStickyItems = useMemo(() => {
+    if (!stickiesVisible) return []
+    const visibleFrameIds = new Set(visibleFrames.map(f => f.id))
+    return stickies
+      .filter(s => visibleFrameIds.has(s.parentFrameId))
+      .map(s => {
+        const parent = frames.find(f => f.id === s.parentFrameId)
+        if (!parent) return null
+        return { sticky: s, x: parent.x + s.offsetX, y: parent.y + s.offsetY }
+      })
+      .filter((item): item is { sticky: CanvasSticky; x: number; y: number } => item !== null)
+  }, [stickies, stickiesVisible, visibleFrames, frames])
+
+  // Toggle notes visibility
+  const toggleStickiesVisible = useCallback(() => {
+    setStickiesVisible(prev => !prev)
+  }, [])
 
   // Get pasted images for the canvas
   const currentPageImages = pageImages['canvas'] ?? []
@@ -1120,7 +1219,14 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
               onCanvasClick={handleCanvasClick}
               hud={<>
                 <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 5 }}>
-                  <StatusFilter visibleStatuses={visibleStatuses} onToggle={toggleStatusVisibility} counts={statusCounts} />
+                  <StatusFilter
+                    visibleStatuses={visibleStatuses}
+                    onToggle={toggleStatusVisibility}
+                    counts={statusCounts}
+                    stickiesVisible={stickiesVisible}
+                    onToggleStickies={toggleStickiesVisible}
+                    stickyCount={stickies.length}
+                  />
                 </div>
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 5, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <CanvasColorPicker activeColor={canvasBg} onSelect={setCanvasBg} />
@@ -1134,9 +1240,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
               </>}
             >
               {/* Render component frames */}
-              {frames
-                .filter(frame => visibleStatuses.has(frameStatuses[frame.id] || 'none'))
-                .map(frame => (
+              {visibleFrames.map(frame => (
                 <Frame
                   key={frame.id}
                   id={frame.id}
@@ -1184,6 +1288,18 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
                     }}
                   />
                 </Frame>
+              ))}
+              {/* Render sticky notes */}
+              {visibleStickyItems.map(({ sticky, x, y }) => (
+                <Sticky
+                  key={sticky.id}
+                  sticky={sticky}
+                  x={x}
+                  y={y}
+                  zoom={1}
+                  selected={selectedStickyIds.has(sticky.id)}
+                  onSelect={handleStickySelect}
+                />
               ))}
             </Canvas>
           </div>

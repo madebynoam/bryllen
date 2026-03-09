@@ -385,6 +385,12 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - **LAY OUT FRAMES HORIZONTALLY** (increasing X, same Y) — see "Frame layout" section above
 - Each frame should be a distinct design bet, not a tweak of the same idea
 - The designer chose ideate because they WANT options to compare side-by-side
+- **After creating each variation frame, attach a sticky note** with the direction rationale:
+  ```bash
+  curl -s -X POST http://localhost:4748/stickies -H 'Content-Type: application/json' \
+    -d '{"project":"<project>","id":"<frameId>-sticky","parentFrameId":"<frameId>","content":"**Direction A** — Brief rationale for this direction..."}'
+  ```
+  Do NOT create separate text/description frames on the canvas. Use stickies only for direction notes.
 
 **Pick mode** (CRITICAL — designer chose this direction):
 - The designer selected frame(s) as THE direction(s) to move forward with
