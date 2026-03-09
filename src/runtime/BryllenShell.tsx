@@ -145,13 +145,13 @@ function StatusFilter({ value, onChange, counts }: StatusFilterProps) {
           padding: '6px 10px',
           background: V.card,
           border: `1px solid ${V.border}`,
-          borderRadius: R.ui,
+          borderRadius: R.ui, cornerShape: 'squircle',
           fontSize: T.ui,
           fontFamily: FONT,
           color: V.txtPri,
           cursor: 'default',
           boxShadow: V.shadow,
-        }}
+        } as React.CSSProperties}
       >
         {current.icon && <current.icon size={14} fill={current.fill} stroke={current.stroke} strokeWidth={2} />}
         <span>{current.label}</span>
@@ -169,13 +169,13 @@ function StatusFilter({ value, onChange, counts }: StatusFilterProps) {
             marginTop: 4,
             background: V.card,
             border: `1px solid ${V.border}`,
-            borderRadius: R.ui,
+            borderRadius: R.ui, cornerShape: 'squircle',
             boxShadow: V.shadow,
             padding: 4,
             zIndex: 1000,
             minWidth: 140,
             pointerEvents: 'auto',
-          }}
+          } as React.CSSProperties}
         >
           {STATUS_FILTER_OPTIONS.map(opt => (
             <FilterDropdownItem

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { useCanvas } from './Canvas'
 import { Star, Check, X } from 'lucide-react'
+import { T, R, V, FONT } from './tokens'
 import type { FrameStatus } from './types'
 
 interface FrameProps {
@@ -28,8 +29,7 @@ const STATUS_ICONS: Record<FrameStatus, { icon: typeof Star; fill: string; strok
 
 const STATUS_ORDER: FrameStatus[] = ['none', 'starred', 'approved', 'rejected']
 
-function DropdownItem({ zoom, selected, onClick, icon: Icon, fill, stroke, label }: {
-  zoom: number
+function DropdownItem({ selected, onClick, icon: Icon, fill, stroke, label }: {
   selected: boolean
   onClick: () => void
   icon: typeof Star
@@ -46,20 +46,21 @@ function DropdownItem({ zoom, selected, onClick, icon: Icon, fill, stroke, label
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 6 / zoom,
+        gap: 8,
         width: '100%',
-        padding: `${4 / zoom}px ${8 / zoom}px`,
-        background: hovered ? 'rgba(0,0,0,0.08)' : selected ? 'rgba(0,0,0,0.05)' : 'none',
+        padding: '6px 10px',
+        background: hovered ? V.active : selected ? 'rgba(0,0,0,0.05)' : 'none',
         border: 'none',
-        borderRadius: 4 / zoom,
+        borderRadius: R.ui, cornerShape: 'squircle',
         cursor: 'default',
-        fontSize: 11 / zoom,
-        color: '#333',
+        fontSize: T.ui,
+        fontFamily: FONT,
+        color: V.txtPri,
         transition: 'background 0.1s ease',
-      }}
+      } as React.CSSProperties}
     >
-      <Icon size={12 / zoom} fill={fill} stroke={stroke} strokeWidth={2} />
-      <span style={{ textTransform: 'capitalize' }}>{label}</span>
+      <Icon size={14} fill={fill} stroke={stroke} strokeWidth={2} />
+      {label && <span style={{ textTransform: 'capitalize' }}>{label}</span>}
     </button>
   )
 }
@@ -225,27 +226,27 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onResi
                   position: 'fixed',
                   top: dropdownPos.top,
                   left: dropdownPos.left,
-                  background: 'white',
-                  borderRadius: 6,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  background: V.card,
+                  border: `1px solid ${V.border}`,
+                  borderRadius: R.ui, cornerShape: 'squircle',
+                  boxShadow: V.shadow,
                   padding: 4,
                   zIndex: 99999,
-                  minWidth: 100,
+                  minWidth: 120,
                   pointerEvents: 'auto',
-                }}
+                } as React.CSSProperties}
               >
                 {STATUS_ORDER.map((s) => {
                   const { icon: Icon, fill: f, stroke: st } = STATUS_ICONS[s]
                   return (
                     <DropdownItem
                       key={s}
-                      zoom={1}
                       selected={status === s}
                       onClick={() => handleStatusSelect(s)}
                       icon={Icon}
                       fill={f}
                       stroke={st}
-                      label={s === 'none' ? 'Clear' : s}
+                      label={s === 'none' ? '' : s}
                     />
                   )
                 })}

@@ -77,7 +77,7 @@ export const S = {
 
 /* Shell radii — ONE radius for UI consistency */
 export const R = {
-  ui:   6,    // all UI: rows, buttons, inputs, cards, menus
+  ui:   8,    // all UI: rows, buttons, inputs, cards, menus (squircle)
   pill: 99,   // full-round pills
 }
 

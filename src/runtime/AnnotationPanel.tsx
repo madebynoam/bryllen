@@ -437,11 +437,10 @@ export function AnnotationPanelWidget({ endpoint }: { endpoint: string }) {
           {drafts.length === 0 && pending.length === 0 && resolved.length === 0 && (
             <div style={{
               padding: `${S.xl}px ${S.md}px`,
-              textAlign: 'center',
               fontSize: T.ui,
               color: V.txtSec,
               textWrap: 'pretty',
-            }}>
+            } as React.CSSProperties}>
               No annotations yet. Use the annotation tool to mark up elements.
             </div>
           )}

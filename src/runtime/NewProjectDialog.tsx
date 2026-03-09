@@ -22,14 +22,14 @@ const inputStyle: React.CSSProperties = {
   background: V.canvas,
   color: V.txtPri,
   border: `1px solid ${V.border}`,
-  borderRadius: R.ui,
+  borderRadius: R.ui, cornerShape: 'squircle',
   padding: S.md,
   fontSize: T.ui,
   lineHeight: 1.5,
   outline: 'none',
   fontFamily: 'inherit',
   boxSizing: 'border-box',
-}
+} as React.CSSProperties
 
 function ImageThumb({ image, onRemove }: { image: PastedImage; onRemove: () => void }) {
   const [hovered, setHovered] = useState(false)
@@ -40,10 +40,10 @@ function ImageThumb({ image, onRemove }: { image: PastedImage; onRemove: () => v
         position: 'relative',
         width: 64,
         height: 64,
-        borderRadius: R.ui,
+        borderRadius: R.ui, cornerShape: 'squircle',
         overflow: 'hidden',
         flexShrink: 0,
-      }}
+      } as React.CSSProperties}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -219,13 +219,13 @@ export function NewProjectDialog({ open, onClose, onSubmit, defaultName }: NewPr
               ) : (
                 <div style={{
                   border: `1px dashed ${V.border}`,
-                  borderRadius: R.ui,
+                  borderRadius: R.ui, cornerShape: 'squircle',
                   padding: S.lg,
                   textAlign: 'center',
                   color: V.txtTer,
                   fontSize: T.ui,
                   fontFamily: FONT,
-                }}>
+                } as React.CSSProperties}>
                   Cmd+V to paste screenshots or mockups
                 </div>
               )}

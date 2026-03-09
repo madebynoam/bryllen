@@ -38,13 +38,13 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
           <div style={{
             width: 32,
             height: 32,
-            borderRadius: R.ui,
+            borderRadius: R.ui, cornerShape: 'squircle',
             background: 'oklch(0.55 0.14 250)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: D.text,
-          }}>
+          } as React.CSSProperties}>
             <ArrowUp size={ICON.lg} strokeWidth={2} />
           </div>
           <div>
@@ -69,10 +69,10 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
         {/* Command box */}
         <div style={{
           background: 'oklch(0.18 0.005 250)',
-          borderRadius: R.ui,
+          borderRadius: R.ui, cornerShape: 'squircle',
           padding: S.md,
           marginBottom: S.md,
-        }}>
+        } as React.CSSProperties}>
           <div style={{
             fontSize: 11,
             color: 'oklch(0.6 0 0)',
@@ -100,7 +100,7 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
                 width: 28,
                 height: 28,
                 border: 'none',
-                borderRadius: R.ui,
+                borderRadius: R.ui, cornerShape: 'squircle',
                 background: copied ? 'oklch(0.55 0.14 155)' : 'oklch(0.28 0.005 250)',
                 color: D.text,
                 display: 'flex',
@@ -108,7 +108,7 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
                 justifyContent: 'center',
                 cursor: 'default',
                 transition: 'background 0.15s ease-out',
-              }}
+              } as React.CSSProperties}
             >
               {copied ? <Check size={14} strokeWidth={2} /> : <Copy size={14} strokeWidth={1.5} />}
             </button>
