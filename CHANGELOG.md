@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.108 — Fix frame position persistence
+
+**Fixed overlapping frames bug:** Saved positions were being applied to ALL frames, even those not manually positioned. This caused stale/incorrect positions to persist across sessions.
+
+- **Root cause:** `useFrames.ts` loaded saved positions for all frames regardless of `manuallyPositioned` flag
+- **Fix:** Only apply saved positions for frames where `manuallyPositioned: true` — non-manual frames use calculated layout positions
+- **Impact:** Fixes overlapping frames, fixes duplicate-looking frames caused by incorrect positions
+
 ## 0.0.105 — Flatten to Project → Canvas
 
 Simplified hierarchy from 4 levels (Project → Iteration → Page → Frame) to 2 levels (Project → Canvas with Frames).

@@ -88,13 +88,21 @@ export function useFrames(
 
       if (cancelled) return
 
+      // Only apply saved positions for frames that were MANUALLY positioned by the user.
+      // Non-manual frames should use the calculated layout position to avoid stale/bad positions.
       const merged = saved
-        ? base.map(f => saved![f.id] ? {
-            ...f,
-            x: saved![f.id].x,
-            y: saved![f.id].y,
-            manuallyPositioned: saved![f.id].manuallyPositioned,
-          } : f)
+        ? base.map(f => {
+            const savedPos = saved![f.id]
+            if (savedPos && savedPos.manuallyPositioned) {
+              return {
+                ...f,
+                x: savedPos.x,
+                y: savedPos.y,
+                manuallyPositioned: true,
+              }
+            }
+            return f
+          })
         : base
 
       setFrames(merged)
