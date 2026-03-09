@@ -29,6 +29,19 @@ interface BryllenShellProps {
 
 const PROJECT_KEY = 'bryllen:active-project'
 
+function filtersKey(project: string) { return `bryllen:filters:${project}` }
+
+function loadFilters(project: string): Set<FrameStatus> {
+  try {
+    const saved = localStorage.getItem(filtersKey(project))
+    if (saved) {
+      const arr = JSON.parse(saved) as FrameStatus[]
+      if (arr.length > 0) return new Set(arr)
+    }
+  } catch {}
+  return new Set(['none', 'starred', 'approved', 'rejected'])
+}
+
 function loadProjectIndex(max: number): number {
   try {
     const saved = localStorage.getItem(PROJECT_KEY)
@@ -552,9 +565,22 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
 
   // Frame status state
   const [frameStatuses, setFrameStatuses] = useState<Record<string, FrameStatus>>({})
-  const [visibleStatuses, setVisibleStatuses] = useState<Set<FrameStatus>>(
-    new Set(['none', 'starred', 'approved', 'rejected'])
+  const [visibleStatuses, setVisibleStatuses] = useState<Set<FrameStatus>>(() =>
+    loadFilters(activeProject?.project ?? '')
   )
+
+  // Reload filters when project changes
+  useEffect(() => {
+    setVisibleStatuses(loadFilters(activeProject?.project ?? ''))
+  }, [activeProject?.project])
+
+  // Persist filters whenever they change
+  useEffect(() => {
+    if (!activeProject?.project) return
+    try {
+      localStorage.setItem(filtersKey(activeProject.project), JSON.stringify(Array.from(visibleStatuses)))
+    } catch {}
+  }, [visibleStatuses, activeProject?.project])
 
   // Frame selection state (multi-select)
   const [selectedFrameIds, setSelectedFrameIds] = useState<Set<string>>(new Set())
