@@ -1,1 +1,9 @@
-{}
+{
+  "enabledPlugins": {
+    "dev-workflow@codekit": false,
+    "find-component@codekit": false,
+    "frontend-design@claude-plugins-official": false,
+    "interface-design@interface-design": false,
+    "dcode@dcode": false
+  }
+}
