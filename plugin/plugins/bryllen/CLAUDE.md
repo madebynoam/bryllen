@@ -110,7 +110,7 @@ Each iteration owns a complete token set scoped under `.iter-v<N>`. No cascade a
 - No cross-iteration imports. Each `v<N>/` is self-contained.
 - **After creating a new iteration**, resolve with `--navigate` to auto-switch the UI:
   ```bash
-  npx bryllen resolve <id> --navigate V8
+  node node_modules/bryllen/src/cli/index.js resolve <id> --navigate V8
   ```
 
 ## Canvas interactions
@@ -140,7 +140,7 @@ Each iteration owns a complete token set scoped under `.iter-v<N>`. No cascade a
 4. **ONLY THEN create/edit pages** — pages import from `../components/` only
 5. **Components use ONLY `var(--token)`** — no hardcoded colors/spacing
 6. **Log to `CHANGELOG.md`**
-7. **Auto-commit** — `npx bryllen resolve <id>` auto-stages and commits
+7. **Auto-commit** — `node node_modules/bryllen/src/cli/index.js resolve <id>` auto-stages and commits
 
 **Shortcut that WILL break things:** Creating a page with inline styled divs. Don't do it.
 
@@ -258,7 +258,7 @@ Designers can paste images (Cmd+V) onto the canvas as visual inspiration. These 
 Before generating designs, run:
 
 ```bash
-npx bryllen context --project my-project --iteration v1
+node node_modules/bryllen/src/cli/index.js context --project my-project --iteration v1
 ```
 
 This returns image paths. Read them with the Read tool to analyze via Vision. Look for:
@@ -282,7 +282,7 @@ Designers can annotate context images like any other frame. Clicking a context i
 
 ```bash
 # Get list of context images
-npx bryllen context --project my-project --iteration v1
+node node_modules/bryllen/src/cli/index.js context --project my-project --iteration v1
 # Returns: { "images": [{ "filename": "inspiration-123.png", "path": "/path/to/file" }, ...] }
 
 # Find the matching image by filename and read THAT file with the Read tool
@@ -398,7 +398,7 @@ During ideation, multiple directions may have different component implementation
 4. Follow guard protocol
 5. Apply changes, route visual values through tokens
 5. **Route visual changes through tokens** — find/create semantic token in `tokens.css`, never hardcode values
-6. Run `npx bryllen resolve <id>` (auto-commits)
+6. Run `node node_modules/bryllen/src/cli/index.js resolve <id>` (auto-commits)
 7. Log to `CHANGELOG.md`
 
 ### Processing project annotations (`type: 'project'`)
@@ -412,32 +412,37 @@ During ideation, multiple directions may have different component implementation
 
 ## CLI Commands (for agent use)
 
+**IMPORTANT: Use `node` directly, NOT `npx`.** `npx` adds 1.5s overhead per command. Direct node is 20x faster.
+
 All annotation commands output JSON for easy parsing:
 
 ```bash
+# The fast way (use this):
+node node_modules/bryllen/src/cli/index.js <command>
+
 # Wait for next annotation (15s default timeout)
-npx bryllen watch [--timeout N]
+node node_modules/bryllen/src/cli/index.js watch [--timeout N]
 
 # Mark annotation as resolved (auto-commits)
-npx bryllen resolve <id>
+node node_modules/bryllen/src/cli/index.js resolve <id>
 
 # Mark resolved AND navigate UI to a specific iteration
-npx bryllen resolve <id> --navigate V8
+node node_modules/bryllen/src/cli/index.js resolve <id> --navigate V8
 
 # Update progress shown on canvas (designer sees this)
-npx bryllen progress <id> "Reading file..."
+node node_modules/bryllen/src/cli/index.js progress <id> "Reading file..."
 
 # List pending annotations
-npx bryllen pending
+node node_modules/bryllen/src/cli/index.js pending
 
 # List all annotations
-npx bryllen list
+node node_modules/bryllen/src/cli/index.js list
 
 # Screenshot canvas
-npx bryllen screenshot [--frame <id>] [--delay <ms>]
+node node_modules/bryllen/src/cli/index.js screenshot [--frame <id>] [--delay <ms>]
 
 # Get context image paths
-npx bryllen context --project <name> --iteration <v>
+node node_modules/bryllen/src/cli/index.js context --project <name> --iteration <v>
 ```
 
 **Progress updates:** Call `progress` at key points so the designer sees what's happening:

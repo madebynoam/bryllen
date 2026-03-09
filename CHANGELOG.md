@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.118 — 20x faster CLI commands
+
+**Performance fix:** Changed CLAUDE.md instructions from `npx bryllen` to `node node_modules/bryllen/src/cli/index.js`. `npx` adds 1.5s overhead per command. Direct node execution takes 0.07s.
+
+For 3-4 commands per annotation, this saves 4+ seconds per annotation.
+
 ## 0.0.117 — Fix annotation CLI projectId mismatch
 
 **Fixed annotations not being processed by agent:** CLI commands (`watch`, `pending`, `list`, `progress`, `resolve`) were not passing `projectId` to the HTTP server, causing them to query a global fallback database instead of the project-specific database where annotations were actually saved.
