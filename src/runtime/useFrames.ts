@@ -90,6 +90,7 @@ function resolveDbFrames(dbFrames: DbFrame[], components: Record<string, Compone
         id: f.id,
         title: f.title,
         component: components[f.componentKey],
+        componentKey: f.componentKey,
         props: f.props,
         x: 0,
         y: 0,
@@ -379,5 +380,34 @@ export function useFrames(
     }
   }, [frames])
 
-  return { frames, addFrame, updateFrame, removeFrame, getNextPosition, handleResize }
+  // Duplicate a frame: adds in-memory immediately, persists to DB in DB mode.
+  // Returns the new frame's ID.
+  const duplicateFrame = useCallback((source: CanvasFrame, x: number, y: number): string => {
+    const newId = crypto.randomUUID()
+    const copy = { ...source, id: newId, x, y, manuallyPositioned: true }
+    setFrames(prev => [...prev, copy])
+    const config = persistConfigRef.current
+    if (isDbMode && config?.project) {
+      const body: Record<string, unknown> = {
+        project: config.project,
+        id: newId,
+        title: source.title,
+        width: source.width,
+        height: source.height,
+      }
+      if (source.type === 'image') {
+        body.src = (source as import('./types').CanvasImageFrame).src
+      } else {
+        body.componentKey = (source as import('./types').CanvasComponentFrame).componentKey ?? null
+      }
+      fetch(`${SERVER_ENDPOINT}/frames`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).catch(() => {})
+    }
+    return newId
+  }, [isDbMode])
+
+  return { frames, addFrame, updateFrame, removeFrame, duplicateFrame, getNextPosition, handleResize }
 }

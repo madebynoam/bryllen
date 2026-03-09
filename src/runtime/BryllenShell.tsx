@@ -680,26 +680,34 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     : undefined
   // DB mode: pass undefined so useFrames fetches from /frames API
   // Manifest mode: pass layoutedFrames as before
-  const { frames, addFrame, updateFrame, removeFrame, handleResize } = useFrames(
+  const { frames, addFrame, updateFrame, removeFrame, duplicateFrame, handleResize } = useFrames(
     isDbMode ? undefined : layoutedFrames,
     activeProject?.grid,
     persistConfig,
     isDbMode ? activeProject.components : undefined,
   )
 
-  // Option+drag: stamp a copy at the origin so it stays behind while the dragged frame becomes the duplicate.
-  // The copy keeps the original ID (so it survives refresh via manifest/DB lookup).
-  // The dragged frame gets a new UUID — returns it so Frame can update idRef for subsequent move calls.
+  // Option+drag: stamp a copy at the origin while the dragged frame moves away.
+  // DB mode: copy gets a new ID and is POSTed to the server — it's a real frame.
+  //   Dragged frame keeps its original ID (already in DB), so idRef doesn't change.
+  // Manifest mode: copy keeps the original manifest-mapped ID; dragged frame gets a
+  //   new UUID so deleting it doesn't mark the manifest entry as deleted. Returns
+  //   the new UUID so Frame.tsx can update idRef for subsequent move calls.
   const handleFrameDuplicate = useCallback((id: string, origX: number, origY: number): string => {
     const source = frames.find(f => f.id === id)
     if (!source) return id
-    const newId = crypto.randomUUID()
-    // Give the dragged frame a new UUID (it's the new duplicate)
-    updateFrame(id, { id: newId } as Partial<CanvasFrame>)
-    // Stamp the copy at origin with the original ID (maps to manifest/DB entry)
-    addFrame({ ...source, x: origX, y: origY, manuallyPositioned: true })
-    return newId
-  }, [frames, addFrame, updateFrame])
+    if (isDbMode) {
+      // DB mode: persist the copy; dragged frame's ID is unchanged
+      duplicateFrame(source, origX, origY)
+      return id
+    } else {
+      // Manifest mode: swap IDs — copy at origin keeps the manifest-mapped ID
+      const newId = crypto.randomUUID()
+      updateFrame(id, { id: newId } as Partial<CanvasFrame>)
+      addFrame({ ...source, x: origX, y: origY, manuallyPositioned: true })
+      return newId
+    }
+  }, [frames, isDbMode, duplicateFrame, updateFrame, addFrame])
 
   // Handle frame move with multi-select support
   const handleFrameMove = useCallback((id: string, newX: number, newY: number) => {

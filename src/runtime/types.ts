@@ -18,6 +18,8 @@ export interface CanvasComponentFrame extends BaseCanvasFrame {
   type?: 'component'
   component: ComponentType<any>
   props?: Record<string, unknown>
+  /** DB mode only: component registry key, used for duplication */
+  componentKey?: string
 }
 
 /** An image frame positioned on the canvas */
@@ -115,4 +117,13 @@ export interface Connection {
   fromFrameId: string
   toFrameId: string
   annotationId?: string
+}
+
+/** A sticky note semantically bound to a parent frame */
+export interface CanvasSticky {
+  id: string
+  parentFrameId: string
+  content: string
+  offsetX: number   // relative to parent frame's x
+  offsetY: number   // typically negative (above the frame)
 }

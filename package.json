@@ -1,6 +1,6 @@
 {
   "name": "bryllen",
-  "version": "0.0.129",
+  "version": "0.0.130",
   "type": "module",
   "exports": {
     "./runtime": "./src/runtime/index.ts",
