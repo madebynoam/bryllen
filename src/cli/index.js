@@ -99,7 +99,10 @@ async function watchAnnotations() {
     timeout = parseInt(args[timeoutIdx + 1], 10) * 1000
   }
 
-  const project = detectProject(args)
+  // For watch: explicit --project wins; otherwise watch ALL projects (no error on multiple)
+  const projectIdx = args.indexOf('--project')
+  const project = (projectIdx !== -1 && args[projectIdx + 1]) ? args[projectIdx + 1] : null
+
   const params = new URLSearchParams()
   params.set('timeout', String(timeout))
   if (project) params.set('projectId', project)

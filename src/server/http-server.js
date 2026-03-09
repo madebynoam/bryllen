@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from 'http'
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync, readdirSync } from 'fs'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import {
@@ -307,6 +307,23 @@ function deleteAnnotationById(projectName, id) {
 }
 
 function getPending(projectName) {
+  // No project specified — scan all project dirs and aggregate pending
+  if (!projectName) {
+    try {
+      const dirs = readdirSync(PROJECTS_DIR).filter(f => {
+        try { return statSync(join(PROJECTS_DIR, f)).isDirectory() && !f.startsWith('.') } catch { return false }
+      })
+      const all = []
+      for (const dir of dirs) {
+        const db = getAnnotationDb(dir)
+        const annotations = getProjectAnnotations(db, 'pending')
+        all.push(...annotations.map(a => ({ ...a, project: dir })))
+      }
+      return all.sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+    } catch {
+      return []
+    }
+  }
   const db = getAnnotationDb(projectName)
   const annotations = getProjectAnnotations(db, 'pending')
   return annotations.map(a => ({ ...a, project: projectName }))
