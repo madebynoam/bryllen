@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 import { spawn, execSync } from 'child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, statSync, cpSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, statSync, cpSync, unlinkSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { createServer } from 'net'
+import { homedir } from 'os'
+import { createHash } from 'crypto'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 import {
@@ -766,6 +768,110 @@ async function startDev() {
     httpSrv.kill()
     process.exit(code ?? 0)
   })
+
+  // Poll for update requests from the canvas UI
+  const updateRequestFile = join(cwd, '.bryllen-update-requested')
+  const updatePollInterval = setInterval(async () => {
+    if (!existsSync(updateRequestFile)) return
+
+    try { unlinkSync(updateRequestFile) } catch {} // consume the request
+    clearInterval(updatePollInterval)
+
+    console.log('\n[bryllen] Update requested from canvas...')
+
+    // 1. Run npm install (same logic as update())
+    try {
+      const bryllenDir = join(cwd, 'node_modules', 'bryllen')
+      if (existsSync(bryllenDir)) execSync(`rm -rf "${bryllenDir}"`, { stdio: 'inherit' })
+
+      const lockPath = join(cwd, 'package-lock.json')
+      if (existsSync(lockPath)) {
+        const lock = JSON.parse(readFileSync(lockPath, 'utf8'))
+        if (lock.packages?.['node_modules/bryllen']) delete lock.packages['node_modules/bryllen']
+        if (lock.dependencies?.bryllen) delete lock.dependencies.bryllen
+        writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n')
+      }
+
+      execSync('npm cache clean --force', { cwd, stdio: 'ignore' })
+      execSync('npm install github:madebynoam/bryllen --force', { cwd, stdio: 'inherit' })
+
+      const viteCacheDir = join(cwd, 'node_modules', '.vite')
+      if (existsSync(viteCacheDir)) execSync(`rm -rf "${viteCacheDir}"`, { stdio: 'ignore' })
+    } catch (e) {
+      console.error('[bryllen] npm install failed:', e.message)
+      return
+    }
+
+    // 2. Update plugin skills via git pull, detect if CLAUDE.md changed
+    const pluginPath = join(homedir(), '.claude', 'plugins', 'marketplaces', 'bryllen')
+    let claudeMdChanged = false
+    if (existsSync(pluginPath)) {
+      const claudeMdFile = join(pluginPath, 'plugin', 'plugins', 'bryllen', 'CLAUDE.md')
+      const hashBefore = existsSync(claudeMdFile)
+        ? createHash('md5').update(readFileSync(claudeMdFile)).digest('hex') : 'none'
+      try { execSync('git pull origin main', { cwd: pluginPath, stdio: 'ignore' }) } catch {}
+      const hashAfter = existsSync(claudeMdFile)
+        ? createHash('md5').update(readFileSync(claudeMdFile)).digest('hex') : 'none'
+      claudeMdChanged = hashBefore !== hashAfter
+    }
+
+    // 3. Run migrations in new process (so freshly-installed code is used)
+    await new Promise(resolve => {
+      const migrate = spawn('node', [
+        join(cwd, 'node_modules', 'bryllen', 'src', 'cli', 'index.js'), 'migrate'
+      ], { cwd, stdio: 'inherit' })
+      migrate.on('exit', resolve)
+    })
+
+    // 4. Write update result for canvas to read after reconnect
+    const newVersion = JSON.parse(
+      readFileSync(join(cwd, 'node_modules', 'bryllen', 'package.json'), 'utf8')
+    ).version
+    writeFileSync(join(cwd, '.bryllen-update-result.json'), JSON.stringify({
+      version: newVersion,
+      claudeMdChanged,
+      timestamp: Date.now(),
+    }))
+
+    // 5. Kill old servers
+    for (const pid of [vite.pid, httpSrv.pid].filter(Boolean)) {
+      try { process.kill(pid, 'SIGTERM') } catch {}
+    }
+    for (const port of [httpPort, vitePort]) {
+      try {
+        const pids = execSync(`lsof -ti:${port}`, { encoding: 'utf8' }).trim()
+        for (const p of pids.split('\n').filter(Boolean)) {
+          try { process.kill(Number(p), 'SIGTERM') } catch {}
+        }
+      } catch {}
+    }
+
+    // 6. Wait for ports to free, then restart with freshly-installed servers
+    await new Promise(r => setTimeout(r, 500))
+
+    const newHttpPort = await findFreePort(4748)
+    const newVitePort = await findFreePort(5173)
+    writePorts(cwd, newHttpPort, newVitePort, null, null)
+
+    const newHttpPath = join(cwd, 'node_modules', 'bryllen', 'src', 'server', 'http-server.js')
+
+    const newVite = spawn('npx', ['vite', '--port', String(newVitePort), '--strictPort'], {
+      cwd, stdio: 'ignore', shell: true, detached: true,
+    })
+    newVite.unref()
+
+    const newHttp = spawn('node', [newHttpPath], {
+      cwd, stdio: 'ignore', detached: true,
+      env: { ...process.env, CANVAI_HTTP_PORT: String(newHttpPort), CANVAI_VITE_PORT: String(newVitePort) },
+    })
+    newHttp.unref()
+
+    writePorts(cwd, newHttpPort, newVitePort, newVite.pid, newHttp.pid)
+    console.log('[bryllen] Updated! Canvas reloading...')
+
+    // Exit this parent process — detached servers keep running
+    process.exit(0)
+  }, 1000)
 }
 
 switch (command) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from 'http'
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, rmSync, readdirSync, unlinkSync } from 'fs'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import {
@@ -351,6 +351,18 @@ function broadcastCommentEvent(event) {
     client.write(payload)
   }
 }
+
+// Broadcast an event to all SSE clients regardless of project
+function broadcast(event) {
+  const payload = `data: ${JSON.stringify(event)}\n\n`
+  for (const client of sseClients) {
+    client.res.write(payload)
+  }
+}
+
+// --- Update state ---
+
+let updateInProgress = false
 
 // --- HTTP server ---
 
@@ -1238,6 +1250,36 @@ const httpServer = createServer(async (req, res) => {
       const data = await parseBody(req)
       setPreference(key, data.value)
       sendJson(res, 200, { key, saved: true })
+      return
+    }
+
+    // POST /update — trigger update from canvas UI
+    if (req.method === 'POST' && url.pathname === '/update') {
+      if (updateInProgress) {
+        sendJson(res, 409, { error: 'Update already in progress' })
+        return
+      }
+      updateInProgress = true
+      writeFileSync(join(process.cwd(), '.bryllen-update-requested'), Date.now().toString())
+      broadcast({ type: 'update-started' })
+      sendJson(res, 200, { ok: true })
+      return
+    }
+
+    // GET /update-result — check update result after page reload (consumed once)
+    if (req.method === 'GET' && url.pathname === '/update-result') {
+      const resultFile = join(process.cwd(), '.bryllen-update-result.json')
+      if (!existsSync(resultFile)) {
+        sendJson(res, 200, null)
+        return
+      }
+      const result = JSON.parse(readFileSync(resultFile, 'utf8'))
+      if (Date.now() - result.timestamp > 60_000) {
+        sendJson(res, 200, null)
+        return
+      }
+      unlinkSync(resultFile) // consume once
+      sendJson(res, 200, result)
       return
     }
 

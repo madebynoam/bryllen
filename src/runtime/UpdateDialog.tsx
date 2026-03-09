@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { ArrowUp, Copy, Check } from 'lucide-react'
+import { ArrowUp, Loader2 } from 'lucide-react'
 import { Overlay, DialogCard, DialogActions, ActionButton } from './Menu'
 import { D, S, R, T, V, ICON, FONT } from './tokens'
 import { setDismissedVersion } from './versionCheck'
@@ -9,16 +9,19 @@ interface UpdateDialogProps {
   onClose: () => void
   currentVersion: string
   latestVersion: string
+  endpoint: string
 }
 
-export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: UpdateDialogProps) {
-  const [copied, setCopied] = useState(false)
+export function UpdateDialog({ open, onClose, currentVersion, latestVersion, endpoint }: UpdateDialogProps) {
+  const [updating, setUpdating] = useState(false)
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText('/bryllen-update')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [])
+  const handleUpdate = useCallback(async () => {
+    setUpdating(true)
+    try {
+      await fetch(`${endpoint}/update`, { method: 'POST' })
+    } catch {}
+    // Stay in "Updating..." until the page reloads automatically
+  }, [endpoint])
 
   const handleDismiss = useCallback(() => {
     setDismissedVersion(latestVersion)
@@ -26,7 +29,8 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
   }, [latestVersion, onClose])
 
   return (
-    <Overlay open={open} onClose={onClose}>
+    <Overlay open={open} onClose={updating ? () => {} : onClose}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <DialogCard width={360}>
         {/* Header */}
         <div style={{
@@ -39,13 +43,17 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
             width: 32,
             height: 32,
             borderRadius: R.ui, cornerShape: 'squircle',
-            background: 'oklch(0.55 0.14 250)',
+            background: updating ? 'oklch(0.45 0.14 250)' : 'oklch(0.55 0.14 250)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: D.text,
+            transition: 'background 0.2s ease-out',
           } as React.CSSProperties}>
-            <ArrowUp size={ICON.lg} strokeWidth={2} />
+            {updating
+              ? <Loader2 size={ICON.lg} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} />
+              : <ArrowUp size={ICON.lg} strokeWidth={2} />
+            }
           </div>
           <div>
             <div style={{
@@ -54,7 +62,7 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
               color: V.txtPri,
               fontFamily: FONT,
             }}>
-              Update available
+              {updating ? 'Updating...' : 'Update available'}
             </div>
             <div style={{
               fontSize: 12,
@@ -66,79 +74,38 @@ export function UpdateDialog({ open, onClose, currentVersion, latestVersion }: U
           </div>
         </div>
 
-        {/* Command box */}
-        <div style={{
-          background: 'oklch(0.18 0.005 250)',
-          borderRadius: R.ui, cornerShape: 'squircle',
-          padding: S.md,
-          marginBottom: S.md,
-        } as React.CSSProperties}>
+        {updating ? (
+          /* Updating state — static, canvas will reload automatically */
           <div style={{
-            fontSize: 11,
-            color: 'oklch(0.6 0 0)',
+            fontSize: 12,
+            color: V.txtSec,
             fontFamily: FONT,
-            marginBottom: S.xs,
-          }}>
-            In Claude Code, run:
+            lineHeight: 1.5,
+            textWrap: 'pretty',
+          } as React.CSSProperties}>
+            Installing update... The canvas will reload automatically when it's ready.
           </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: S.sm,
-          }}>
-            <code style={{
-              fontSize: 13,
-              color: D.text,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            }}>
-              /bryllen-update
-            </code>
-            <button
-              onClick={handleCopy}
-              style={{
-                width: 28,
-                height: 28,
-                border: 'none',
-                borderRadius: R.ui, cornerShape: 'squircle',
-                background: copied ? 'oklch(0.55 0.14 155)' : 'oklch(0.28 0.005 250)',
-                color: D.text,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'default',
-                transition: 'background 0.15s ease-out',
-              } as React.CSSProperties}
-            >
-              {copied ? <Check size={14} strokeWidth={2} /> : <Copy size={14} strokeWidth={1.5} />}
-            </button>
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* Description */}
+            <div style={{
+              fontSize: 12,
+              color: V.txtSec,
+              fontFamily: FONT,
+              lineHeight: 1.5,
+              textWrap: 'pretty',
+              marginBottom: S.md,
+            } as React.CSSProperties}>
+              Bryllen {latestVersion} is available. Click Update to install it now — no terminal needed.
+            </div>
 
-        {/* Instructions */}
-        <div style={{
-          fontSize: 12,
-          color: V.txtSec,
-          fontFamily: FONT,
-          lineHeight: 1.5,
-          textWrap: 'pretty',
-        }}>
-          Then restart Claude Code and run <code style={{
-            background: V.active,
-            padding: '1px 4px',
-            borderRadius: 3,
-            fontSize: 11,
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-          }}>/bryllen-design</code>
-        </div>
-
-        {/* Actions */}
-        <DialogActions>
-          <ActionButton variant="ghost" onClick={handleDismiss}>Dismiss</ActionButton>
-          <ActionButton variant="primary" onClick={handleCopy}>
-            {copied ? 'Copied!' : 'Copy command'}
-          </ActionButton>
-        </DialogActions>
+            {/* Actions */}
+            <DialogActions>
+              <ActionButton variant="ghost" onClick={handleDismiss}>Dismiss</ActionButton>
+              <ActionButton variant="primary" onClick={handleUpdate}>Update</ActionButton>
+            </DialogActions>
+          </>
+        )}
       </DialogCard>
     </Overlay>
   )

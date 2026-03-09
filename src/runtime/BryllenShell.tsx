@@ -374,6 +374,8 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   // Update checker state
   const [updateInfo, setUpdateInfo] = useState<{ available: boolean; latestVersion: string | null }>({ available: false, latestVersion: null })
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [updateResult, setUpdateResult] = useState<{ claudeMdChanged: boolean; version: string } | null>(null)
 
   const showToast = useCallback((msg: string) => setToast(msg), [])
 
@@ -462,7 +464,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
   }, [annotationEndpoint, showToast, promptRequest])
 
-  // SSE listener for prompt-requested events
+  // SSE listener for prompt-requested and update-started events
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -470,6 +472,11 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     source.onmessage = async (e) => {
       try {
         const data = JSON.parse(e.data)
+        if (data.type === 'update-started') {
+          setIsUpdating(true)
+          setUpdateDialogOpen(false)
+          return
+        }
         if (data.type === 'prompt-requested' && data.id) {
           // Fetch the annotation to get the project name
           const res = await fetch(`${annotationEndpoint}/annotations`)
@@ -490,6 +497,18 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       } catch { /* ignore parse errors */ }
     }
     return () => source.close()
+  }, [annotationEndpoint])
+
+  // Check for update result on mount — show "Restart Claude Code" notice if CLAUDE.md changed
+  useEffect(() => {
+    fetch(`${annotationEndpoint}/update-result`)
+      .then(r => r.json())
+      .then(result => {
+        if (result?.claudeMdChanged) {
+          setUpdateResult({ claudeMdChanged: true, version: result.version })
+        }
+      })
+      .catch(() => {})
   }, [annotationEndpoint])
 
   // Sync URL when project changes
@@ -1128,7 +1147,88 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         onClose={() => setUpdateDialogOpen(false)}
         currentVersion={VERSION}
         latestVersion={updateInfo.latestVersion ?? ''}
+        endpoint={annotationEndpoint}
       />
+
+      {/* Full-screen updating overlay — shown while update is running */}
+      {isUpdating && (
+        <>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          background: 'oklch(0.1 0.005 250 / 0.85)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: S.md,
+          fontFamily: FONT,
+        }}>
+          <div style={{
+            width: 40,
+            height: 40,
+            borderRadius: R.pill,
+            background: 'oklch(0.55 0.14 250)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: D.text,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          </div>
+          <div style={{ fontSize: T.ui, fontWeight: 600, color: D.text }}>Updating Bryllen...</div>
+          <div style={{ fontSize: 12, color: 'oklch(0.65 0 0)' }}>The canvas will reload automatically</div>
+        </div>
+        </>
+      )}
+
+      {/* "Restart Claude Code" notice — shown after update if CLAUDE.md changed */}
+      {updateResult?.claudeMdChanged && (
+        <div style={{
+          position: 'fixed',
+          bottom: S.xxl,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 99998,
+          display: 'flex',
+          alignItems: 'center',
+          gap: S.sm,
+          padding: `${S.sm}px ${S.md}px`,
+          background: V.card,
+          border: `1px solid ${V.border}`,
+          borderRadius: R.pill,
+          boxShadow: V.shadow,
+          fontFamily: FONT,
+          fontSize: T.ui,
+          color: V.txtPri,
+          whiteSpace: 'nowrap',
+        }}>
+          <span>Restart Claude Code to get the latest agent instructions</span>
+          <button
+            onClick={() => setUpdateResult(null)}
+            style={{
+              width: 20,
+              height: 20,
+              border: 'none',
+              borderRadius: R.pill,
+              background: V.active,
+              color: V.txtSec,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'default',
+              flexShrink: 0,
+            }}
+          >
+            <X size={12} strokeWidth={2} />
+          </button>
+        </div>
+      )}
 
       {/* First-use onboarding tour */}
       {showTour && manifests.length > 0 && (
