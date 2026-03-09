@@ -15,6 +15,7 @@ interface FrameProps {
   height: number
   children: ReactNode
   onMove?: (id: string, x: number, y: number) => void
+  onDuplicate?: (id: string, newX: number, newY: number, origX: number, origY: number) => void
   onResize?: (id: string, height: number) => void
   status?: FrameStatus
   onStatusChange?: (id: string, status: FrameStatus) => void
@@ -67,7 +68,7 @@ function DropdownItem({ selected, onClick, icon: Icon, fill, stroke, label }: {
   )
 }
 
-export function Frame({ id, title, x, y, width, height, children, onMove, onResize, status = 'none', onStatusChange, selected = false, onSelect }: FrameProps) {
+export function Frame({ id, title, x, y, width, height, children, onMove, onDuplicate, onResize, status = 'none', onStatusChange, selected = false, onSelect }: FrameProps) {
   const { zoom } = useCanvas()
   const frameRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -77,6 +78,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onResi
   const frameStartRef = useRef({ x: 0, y: 0 })
   const dragDistanceRef = useRef(0)
   const onMoveRef = useRef(onMove)
+  const onDuplicateRef = useRef(onDuplicate)
   const zoomRef = useRef(zoom)
   const idRef = useRef(id)
   const onSelectRef = useRef(onSelect)
@@ -84,6 +86,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onResi
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
 
   onMoveRef.current = onMove
+  onDuplicateRef.current = onDuplicate
   zoomRef.current = zoom
   idRef.current = id
   onSelectRef.current = onSelect
@@ -119,26 +122,37 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onResi
     frameStartRef.current = { x, y }
     dragDistanceRef.current = 0
     const shiftKeyAtStart = e.shiftKey
+    const altKeyAtStart = e.altKey
+
+    let currentX = x
+    let currentY = y
 
     function handleWindowMove(ev: PointerEvent) {
       if (!isDraggingRef.current) return
       const dx = (ev.clientX - dragStartRef.current.x) / zoomRef.current
       const dy = (ev.clientY - dragStartRef.current.y) / zoomRef.current
       dragDistanceRef.current = Math.sqrt(dx * dx + dy * dy)
-      onMoveRef.current?.(idRef.current, frameStartRef.current.x + dx, frameStartRef.current.y + dy)
+      currentX = frameStartRef.current.x + dx
+      currentY = frameStartRef.current.y + dy
+      onMoveRef.current?.(idRef.current, currentX, currentY)
     }
 
     function handleWindowUp() {
-      const wasClick = dragDistanceRef.current < 5 // Less than 5px = click, not drag
+      const wasDrag = dragDistanceRef.current >= 5
       isDraggingRef.current = false
       window.removeEventListener('pointermove', handleWindowMove)
       window.removeEventListener('pointerup', handleWindowUp)
-      // Call onSelect on click (not drag)
-      if (wasClick && onSelectRef.current) {
+      if (altKeyAtStart) document.body.style.cursor = ''
+
+      if (altKeyAtStart && wasDrag && onDuplicateRef.current) {
+        // Option+drag: create duplicate at drop position, restore original
+        onDuplicateRef.current(idRef.current, currentX, currentY, frameStartRef.current.x, frameStartRef.current.y)
+      } else if (!wasDrag && onSelectRef.current) {
         onSelectRef.current(idRef.current, shiftKeyAtStart)
       }
     }
 
+    if (altKeyAtStart) document.body.style.cursor = 'copy'
     window.addEventListener('pointermove', handleWindowMove)
     window.addEventListener('pointerup', handleWindowUp)
   }, [x, y])

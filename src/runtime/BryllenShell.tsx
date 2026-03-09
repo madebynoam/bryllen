@@ -661,12 +661,20 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     : undefined
   // DB mode: pass undefined so useFrames fetches from /frames API
   // Manifest mode: pass layoutedFrames as before
-  const { frames, updateFrame, removeFrame, handleResize } = useFrames(
+  const { frames, addFrame, updateFrame, removeFrame, handleResize } = useFrames(
     isDbMode ? undefined : layoutedFrames,
     activeProject?.grid,
     persistConfig,
     isDbMode ? activeProject.components : undefined,
   )
+
+  // Option+drag: restore original position, create duplicate at drop position
+  const handleFrameDuplicate = useCallback((id: string, newX: number, newY: number, origX: number, origY: number) => {
+    const source = frames.find(f => f.id === id)
+    if (!source) return
+    updateFrame(id, { x: origX, y: origY })
+    addFrame({ ...source, id: `${id}-copy-${Date.now()}`, x: newX, y: newY, manuallyPositioned: true })
+  }, [frames, updateFrame, addFrame])
 
   // Handle frame move with multi-select support
   const handleFrameMove = useCallback((id: string, newX: number, newY: number) => {
@@ -1050,6 +1058,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
                   width={frame.width}
                   height={frame.height}
                   onMove={handleFrameMove}
+                  onDuplicate={handleFrameDuplicate}
                   onResize={handleResize}
                   status={frameStatuses[frame.id] || 'none'}
                   onStatusChange={handleFrameStatusChange}
