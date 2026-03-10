@@ -421,7 +421,21 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   const [commentCount, setCommentCount] = useState(0)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null)
+  const [panelAnnotationId, setPanelAnnotationId] = useState<string | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const panelCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showPanel = (id: string) => {
+    if (panelCloseTimerRef.current) clearTimeout(panelCloseTimerRef.current)
+    setPanelAnnotationId(id)
+    setPanelOpen(true)
+  }
+  const closePanel = () => {
+    setPanelOpen(false)
+    if (panelCloseTimerRef.current) clearTimeout(panelCloseTimerRef.current)
+    panelCloseTimerRef.current = setTimeout(() => setPanelAnnotationId(null), 420)
+  }
+
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   // Images stored per-page: { "pageName": CanvasImageFrame[] }
   const [pageImages, setPageImages] = useState<Record<string, CanvasImageFrame[]>>({})
@@ -548,11 +562,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
           return
         }
         if (data.type === 'applied' && data.id) {
-          setActiveAnnotationId(String(data.id))
-        }
-        if (data.type === 'resolved' && data.id) {
-          // Clear progress panel when resolved (panel also auto-dismisses, but clear just in case)
-          setActiveAnnotationId(prev => prev === String(data.id) ? null : prev)
+          showPanel(String(data.id))
         }
         if (data.type === 'prompt-requested' && data.id) {
           // Fetch the annotation to get the project name
@@ -1259,8 +1269,8 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         projectId={activeProject?.id}
       />
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <div style={{ flex: 1, backgroundColor: V.chrome, padding: `${E.insetTop}px ${E.inset}px ${E.inset}px` }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', backgroundColor: V.chrome }}>
+        <div style={{ flex: 1, padding: `${E.insetTop}px ${E.inset}px ${E.inset}px` }}>
           <div style={{
             width: '100%',
             height: '100%',
@@ -1364,18 +1374,38 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
             </Canvas>
           </div>
         </div>
+
+        {/* ── Progress panel slot — slides in beside canvas ── */}
+        <div
+          style={{
+            flexShrink: 0,
+            width: panelOpen ? 248 : 0,
+            overflow: 'hidden',
+            transition: `width 380ms ${panelOpen ? 'cubic-bezier(0.32, 0.72, 0, 1)' : 'cubic-bezier(0.25, 0.1, 0.25, 1)'}`,
+          }}
+        >
+          <div
+            style={{
+              width: 248,
+              height: '100%',
+              padding: `${E.insetTop}px ${E.inset}px ${E.inset}px 0`,
+              boxSizing: 'border-box',
+            }}
+          >
+            {panelAnnotationId && (
+              <ProgressPanel
+                annotationId={panelAnnotationId}
+                endpoint={annotationEndpoint}
+                project={activeProject?.project}
+                projectId={activeProject?.id}
+                onDismiss={closePanel}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={[...frames, ...currentPageImages]} showToast={showToast} project={projectKey} projectId={activeProject?.id} />}
-      {activeAnnotationId && (
-        <ProgressPanel
-          annotationId={activeAnnotationId}
-          endpoint={annotationEndpoint}
-          project={activeProject?.project}
-          projectId={activeProject?.id}
-          onDismiss={() => setActiveAnnotationId(null)}
-        />
-      )}
       {/* Comment overlay hidden for now */}
       {/* <CommentOverlay endpoint={annotationEndpoint} frames={frames} onCommentCountChange={setCommentCount} /> */}
       {import.meta.env.DEV && (

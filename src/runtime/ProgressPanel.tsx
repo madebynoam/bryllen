@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, X, Check } from 'lucide-react'
-import { F, R, S, T, V, D, FONT, ICON } from './tokens'
-
-const SPRING = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
-const GENTLE = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
-const PANEL_WIDTH = 236
+import { F, R, S, T, V, D, E, FONT, ICON } from './tokens'
 
 interface ProgressFrame {
   id: string
@@ -27,7 +23,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
   const [messages, setMessages] = useState<string[]>([])
   const [frames, setFrames] = useState<ProgressFrame[]>([])
   const [status, setStatus] = useState<Status>('pending')
-  const [visible, setVisible] = useState(false)
   const [comment, setComment] = useState('')
 
   const knownFrameIdsRef = useRef<Set<string>>(new Set())
@@ -35,12 +30,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
   onDismissRef.current = onDismiss
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Slide in on mount
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 16)
-    return () => clearTimeout(timer)
-  }, [])
 
   // Fetch annotation comment for display
   useEffect(() => {
@@ -50,7 +39,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
       .then((annotations: Array<{ id: string; comment: string; type?: string }>) => {
         const ann = annotations.find(a => String(a.id) === annotationId)
         if (ann) {
-          // Truncate long comments
           const text = ann.comment || ''
           setComment(text.length > 60 ? text.slice(0, 57) + '…' : text)
         }
@@ -78,7 +66,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
         }
 
         if (data.type === 'frame-created' && project) {
-          // Fetch updated frames list and find newly added frames
           fetch(`${endpoint}/frames?project=${encodeURIComponent(project)}`)
             .then(r => r.json())
             .then((dbFrames: Array<{ id: string; title: string }>) => {
@@ -93,21 +80,13 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
 
         if (data.type === 'resolved' && String(data.id) === annotationId) {
           setStatus('done')
-          setTimeout(() => {
-            setVisible(false)
-            setTimeout(() => onDismissRef.current(), 320)
-          }, 2000)
+          setTimeout(() => onDismissRef.current(), 2000)
         }
       } catch { /* ignore */ }
     }
 
     return () => source.close()
   }, [endpoint, projectId, annotationId, project])
-
-  const handleClose = () => {
-    setVisible(false)
-    setTimeout(() => onDismissRef.current(), 320)
-  }
 
   return (
     <>
@@ -123,27 +102,13 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
         }
       `}</style>
 
-      <div
-        style={{
-          position: 'fixed',
-          top: 56,
-          right: 0,
-          bottom: 56,
-          width: PANEL_WIDTH,
-          zIndex: 200,
-          pointerEvents: visible ? 'auto' : 'none',
-          transform: visible ? 'translateX(0)' : `translateX(${PANEL_WIDTH + 16}px)`,
-          transition: `transform 380ms ${visible ? SPRING : GENTLE}`,
-        }}
-      >
+      <div style={{ height: '100%' }}>
         <div
           style={{
             height: '100%',
-            margin: `${S.md}px ${S.md}px ${S.md}px 0`,
             background: V.card,
-            border: `1px solid ${V.border}`,
             borderRadius: R.ui,
-            boxShadow: V.shadow,
+            boxShadow: E.shadow,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -161,7 +126,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
               flexShrink: 0,
             }}
           >
-            {/* Status indicator */}
             {status === 'done' ? (
               <div
                 style={{
@@ -216,7 +180,7 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
             </div>
 
             <button
-              onClick={handleClose}
+              onClick={() => onDismissRef.current()}
               style={{
                 width: 20,
                 height: 20,
