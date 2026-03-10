@@ -44,7 +44,7 @@ export function FontSizeToken({ value, label, sublabel, tokenPath }: FontSizeTok
           display: 'flex', alignItems: 'center', gap: S.sm, fontFamily: FONT,
           padding: `${S.xs}px ${S.sm}px`,
           margin: `0 -${S.sm}px`,
-          borderRadius: R.ui,
+          borderRadius: R.ui, cornerShape: 'squircle',
           backgroundColor: hovered ? 'rgba(0,0,0,0.03)' : 'transparent',
           cursor: 'default',
         }}
@@ -52,7 +52,7 @@ export function FontSizeToken({ value, label, sublabel, tokenPath }: FontSizeTok
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <div style={{
             width: 32, height: 32,
-            borderRadius: R.ui,
+            borderRadius: R.ui, cornerShape: 'squircle',
             border: `1px solid ${V.border}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             backgroundColor: V.card,
@@ -92,10 +92,10 @@ export function FontSizeToken({ value, label, sublabel, tokenPath }: FontSizeTok
               left: containerRef.current?.getBoundingClientRect().left ?? 0,
               zIndex: 10000,
               backgroundColor: V.card,
-              borderRadius: R.ui,
+              borderRadius: R.ui, cornerShape: 'squircle',
               border: `1px solid ${V.border}`,
               padding: S.sm,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              boxShadow: V.shadowPanel,
             }}
           >
             <TokenSlider

@@ -233,9 +233,9 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
 
   // Selection ring style
   const selectionRingStyle = selected ? {
-    boxShadow: '0 0 0 2px oklch(65% 0.2 250)', // blue selection ring
-    borderRadius: 4,
-  } : {}
+    boxShadow: '0 0 0 2px oklch(65% 0.2 250)',
+    borderRadius: R.ui, cornerShape: 'squircle',
+  } as React.CSSProperties : {}
 
   return (
     <div
@@ -276,7 +276,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
                 border: 'none',
                 padding: 4,
                 margin: -4,
-                borderRadius: 4,
+                borderRadius: R.ui, cornerShape: 'squircle',
                 cursor: 'default',
                 display: 'flex',
                 alignItems: 'center',
@@ -350,7 +350,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
                 border: 'none',
                 padding: 4,
                 margin: -4,
-                borderRadius: 4,
+                borderRadius: R.ui, cornerShape: 'squircle',
                 cursor: 'default',
                 display: 'flex',
                 alignItems: 'center',

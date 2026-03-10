@@ -197,7 +197,7 @@ export function TourOverlay({ onComplete }: TourOverlayProps) {
             width: targetRect.width + 8,
             height: targetRect.height + 8,
             border: `2px solid ${A.accent}`,
-            borderRadius: R.ui,
+            borderRadius: R.ui, cornerShape: 'squircle',
             background: 'transparent',
             boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.4), 0 0 20px ${A.accent}`,
             pointerEvents: 'none',
@@ -215,9 +215,9 @@ export function TourOverlay({ onComplete }: TourOverlayProps) {
           left: cardLeft,
           width: cardWidth,
           background: V.card,
-          borderRadius: R.ui,
+          borderRadius: R.ui, cornerShape: 'squircle',
           border: `1px solid ${V.border}`,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+          boxShadow: V.shadowPanel,
           padding: S.lg,
           fontFamily: FONT,
           zIndex: 99992,
@@ -284,7 +284,7 @@ export function TourOverlay({ onComplete }: TourOverlayProps) {
               fontFamily: FONT,
               cursor: 'default',
               padding: `${S.xs}px ${S.sm}px`,
-              borderRadius: R.ui,
+              borderRadius: R.ui, cornerShape: 'squircle',
             }}
           >
             Skip tour

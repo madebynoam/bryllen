@@ -62,7 +62,7 @@ interface MenuPanelProps {
   onBackdropClick?: () => void
 }
 
-const PANEL_SHADOW = `0 ${S.xs}px ${S.lg}px rgba(0, 0, 0, 0.08), 0 1px ${S.xs}px rgba(0, 0, 0, 0.04)`
+const PANEL_SHADOW = V.shadowPanel
 
 export function MenuPanel({
   children,

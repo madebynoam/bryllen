@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Check, Copy, ExternalLink, Github, Loader2, RefreshCw, X } from 'lucide-react'
-import { S, R, T, V, FONT, ICON } from './tokens'
+import { S, R, T, V, FONT, ICON, D } from './tokens'
 
 export type ShareStatus = 'checking' | 'needs-auth' | 'idle' | 'sharing' | 'shared'
 
@@ -75,7 +75,7 @@ export function SharePopover({
         backgroundColor: V.card,
         border: `1px solid ${V.border}`,
         borderRadius: R.ui, cornerShape: 'squircle',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+        boxShadow: V.shadowPanel,
         fontFamily: FONT,
         zIndex: 10000,
         overflow: 'hidden',

@@ -76,6 +76,7 @@ export function CanvasColorPicker({
   const { resolved } = useTheme()
   const isDarkTheme = resolved === 'dark'
   const presets = isDarkTheme ? darkPresets : lightPresets
+  const isNonDefault = activeColor !== DEFAULT_CANVAS_COLOR && activeColor !== presets[0].value
 
   // Close on click outside
   useEffect(() => {
@@ -102,16 +103,19 @@ export function CanvasColorPicker({
           width: 28,
           height: 28,
           borderRadius: '50%',
-          border: `1px solid ${V.border}`,
-          background: V.chrome,
+          border: isNonDefault
+            ? `2px solid ${A.accent}`
+            : `1px solid ${V.border}`,
+          background: isNonDefault ? activeColor : V.chrome,
           cursor: 'default',
           padding: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          boxSizing: 'border-box',
         }}
       >
-        <Palette size={ICON.md} strokeWidth={1.5} style={{ color: V.txtSec }} />
+        {!isNonDefault && <Palette size={ICON.md} strokeWidth={1.5} style={{ color: V.txtSec }} />}
       </button>
 
       {open && (
@@ -128,9 +132,7 @@ export function CanvasColorPicker({
             borderRadius: R.ui, cornerShape: 'squircle',
             padding: S.sm,
             fontFamily: FONT,
-            boxShadow: isDarkTheme
-              ? '0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)'
-              : '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: V.shadowPanel,
             zIndex: 10,
             display: 'flex',
             flexDirection: 'row',

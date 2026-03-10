@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, SwatchBook } from 'lucide-react'
 import { S, R, T, ICON, FONT, V } from './tokens'
-import { useTheme } from './useTheme'
+
 import type { PageManifest } from './types'
 
 interface TokenPanelProps {
@@ -12,9 +12,6 @@ interface TokenPanelProps {
 
 export function TokenPanel({ open, onClose, tokensPage }: TokenPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
-  const { resolved } = useTheme()
-  const isDarkTheme = resolved === 'dark'
-
   // Close on click outside
   useEffect(() => {
     if (!open) return
@@ -79,11 +76,9 @@ export function TokenPanel({ open, onClose, tokensPage }: TokenPanelProps) {
         zIndex: 10,
         background: V.chrome,
         border: `1px solid ${V.border}`,
-        borderRadius: R.ui,
+        borderRadius: R.ui, cornerShape: 'squircle',
         fontFamily: FONT,
-        boxShadow: isDarkTheme
-          ? '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)'
-          : '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
+        boxShadow: V.shadowPanel,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',

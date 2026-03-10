@@ -75,9 +75,9 @@ export const S = {
   xxl: 24,  // panel gaps
 }
 
-/* Shell radii — ONE radius for UI consistency */
+/* Shell radii — generous radius for premium feel */
 export const R = {
-  ui:   8,    // all UI: rows, buttons, inputs, cards, menus (squircle)
+  ui:   16,   // all UI: rows, buttons, inputs, cards, menus (squircle)
   pill: 99,   // full-round pills
 }
 
@@ -129,6 +129,7 @@ export const V = {
   accentBorder:'var(--bryllen-accent-border)',
   // Shadows
   shadow:     'var(--bryllen-shadow)',
+  shadowPanel:'var(--bryllen-shadow-panel)',
   inset:      'var(--bryllen-inset)',
 }
 
@@ -151,6 +152,7 @@ export const lightTheme: Record<string, string> = {
   '--bryllen-accent-strong':'oklch(0.240 0.005 240)',
   '--bryllen-accent-border':'oklch(0.700 0.004 240)',
   '--bryllen-shadow':       '0 1px 3px rgba(0,0,0,0.08)',
+  '--bryllen-shadow-panel': '0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
   '--bryllen-inset':        'inset 0 1px 2px rgba(0,0,0,0.04)',
 }
 
@@ -173,5 +175,6 @@ export const darkTheme: Record<string, string> = {
   '--bryllen-accent-strong':'oklch(0.900 0.005 240)',
   '--bryllen-accent-border':'oklch(0.450 0.004 240)',
   '--bryllen-shadow':       '0 2px 8px rgba(0,0,0,0.3)',
+  '--bryllen-shadow-panel': '0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.15)',
   '--bryllen-inset':        'inset 0 1px 2px rgba(0,0,0,0.2)',
 }

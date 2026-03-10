@@ -553,7 +553,7 @@ export function Canvas({ children, pageKey, hud, onImagePaste, onCanvasClick }: 
               '--radius-card': '8px',
               '--radius-panel': '12px',
               '--radius-pill': '20px',
-              '--radius-ui': `${R.ui}px`,
+              '--radius-ui': '16px',
               // Default font size CSS variables (all variations)
               '--font-label': '9px',
               '--font-pill': '10px',

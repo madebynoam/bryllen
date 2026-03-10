@@ -72,19 +72,24 @@ export function TopBar({
               alignItems: 'center',
               gap: S.xs,
               padding: `${S.xs}px ${S.sm}px`,
-              border: 'none',
-              borderRadius: R.ui,
-              background: updateHovered ? 'oklch(0.50 0.14 250)' : 'oklch(0.55 0.14 250)',
-              color: D.text,
+              border: `1px solid ${V.border}`,
+              borderRadius: R.ui, cornerShape: 'squircle',
+              background: updateHovered ? V.active : V.card,
+              color: V.txtPri,
               fontSize: T.ui,
               fontWeight: 500,
               fontFamily: FONT,
               cursor: 'default',
-              transition: 'background 0.1s ease-out',
             }}
           >
-            <ArrowUp size={ICON.sm} strokeWidth={2} />
-            Update available
+            <div style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: 'oklch(0.55 0.14 155)',
+              flexShrink: 0,
+            }} />
+            Update
           </button>
         )}
 

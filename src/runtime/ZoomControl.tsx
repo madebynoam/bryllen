@@ -49,7 +49,7 @@ export function ZoomControl() {
       borderRadius: R.ui, cornerShape: 'squircle',
       padding: 2,
       fontFamily: FONT,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.03)',
+      boxShadow: V.shadow,
     }}>
       <ZoomButton onClick={zoomOut} title="Zoom out (Cmd -)">
         <Minus size={ICON.sm} strokeWidth={1.5} />
