@@ -388,22 +388,51 @@ export function useFrames(
     setFrames(prev => [...prev, copy])
     const config = persistConfigRef.current
     if (isDbMode && config?.project) {
+      // Resolve componentKey: use source's key, or look it up in registry by matching component ref
+      let componentKey: string | null = null
+      if (source.type === 'image') {
+        // images use src, not componentKey
+      } else {
+        const srcComp = source as import('./types').CanvasComponentFrame
+        componentKey = srcComp.componentKey ?? null
+        // If componentKey is missing, reverse-lookup from the registry
+        if (!componentKey && srcComp.component) {
+          const registry = componentsRegistryRef.current ?? {}
+          for (const [key, comp] of Object.entries(registry)) {
+            if (comp === srcComp.component) { componentKey = key; break }
+          }
+        }
+      }
+
       const body: Record<string, unknown> = {
         project: config.project,
         id: newId,
-        title: source.title,
+        title: source.title || 'Untitled',
         width: source.width,
         height: source.height,
       }
       if (source.type === 'image') {
         body.src = (source as import('./types').CanvasImageFrame).src
       } else {
-        body.componentKey = (source as import('./types').CanvasComponentFrame).componentKey ?? null
+        body.componentKey = componentKey
       }
       fetch(`${SERVER_ENDPOINT}/frames`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+      }).then(() => {
+        // Immediately persist the position after frame is created — don't rely on
+        // the 300ms debounce which can be pre-empted by SSE re-renders.
+        fetch(`${SERVER_ENDPOINT}/frame-positions`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project: config.project,
+            page: 'canvas',
+            positions: { [newId]: { x, y, manuallyPositioned: true } },
+            deletedIds: [],
+          }),
+        }).catch(() => {})
       }).catch(() => {})
     }
     return newId

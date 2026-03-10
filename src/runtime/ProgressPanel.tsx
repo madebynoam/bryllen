@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Loader2, X, Check } from 'lucide-react'
-import { F, R, S, T, V, D, E, FONT, ICON } from './tokens'
+import { X, Check } from 'lucide-react'
+import { F, R, S, T, V, D, FONT, ICON } from './tokens'
 
 interface ProgressFrame {
   id: string
@@ -92,10 +92,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
     <>
       <style>{`
         @keyframes bryllen-panel-spin { to { transform: rotate(360deg) } }
-        @keyframes bryllen-panel-pulse {
-          0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
-          40% { transform: scale(1); opacity: 1; }
-        }
         @keyframes bryllen-panel-fadein {
           from { opacity: 0; transform: translateY(4px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -108,7 +104,7 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
             height: '100%',
             background: V.card,
             borderRadius: R.ui,
-            boxShadow: E.shadow,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.04)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -145,18 +141,16 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
             ) : (
               <div
                 style={{
-                  width: 18,
-                  height: 18,
-                  color: F.marker,
-                  animation: 'bryllen-panel-spin 1s linear infinite',
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  border: `1.5px solid ${V.border}`,
+                  borderTopColor: F.marker,
+                  animation: 'bryllen-panel-spin 0.85s linear infinite',
                   flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  boxSizing: 'border-box',
                 }}
-              >
-                <Loader2 size={ICON.md} strokeWidth={2} />
-              </div>
+              />
             )}
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -286,31 +280,6 @@ export function ProgressPanel({ annotationId, endpoint, project, projectId, onDi
                       {frame.title}
                     </span>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Pulsing dots while active */}
-            {status !== 'done' && (
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 4,
-                  padding: `${S.sm}px ${S.sm}px`,
-                  marginTop: S.xs,
-                }}
-              >
-                {[0, 1, 2].map(i => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 4,
-                      height: 4,
-                      borderRadius: '50%',
-                      background: F.marker,
-                      animation: `bryllen-panel-pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
-                    }}
-                  />
                 ))}
               </div>
             )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { A, F, D, S, R, T, V, ICON, FONT } from './tokens'
-import { Wand2, Crosshair, Loader2, Trophy } from 'lucide-react'
+import { Wand2, Crosshair, Trophy } from 'lucide-react'
 import { useMenu, MenuPanel } from './Menu'
 
 /* ─── Types ───────────────────────────────────────────── */
@@ -41,21 +41,20 @@ function AnnotationBadge({ count, pendingCount, onClick }: { count: number; pend
         cursor: 'default',
       }}
     >
-      {/* Spinner — visible when agent is processing */}
+      {/* Arc spinner — visible when agent is processing */}
       {pendingCount > 0 && (
         <div
           style={{
-            width: ICON.sm,
-            height: ICON.sm,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: F.marker,
-            animation: 'bryllen-spin 1s linear infinite',
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            border: `1.5px solid ${V.border}`,
+            borderTopColor: F.marker,
+            animation: 'bryllen-spin 0.85s linear infinite',
+            flexShrink: 0,
+            boxSizing: 'border-box',
           }}
-        >
-          <Loader2 size={ICON.sm} strokeWidth={2} />
-        </div>
+        />
       )}
       <div
         style={{
@@ -213,22 +212,20 @@ function PendingRow({ annotation }: { annotation: Annotation }) {
         cursor: 'default',
       }}
     >
-      {/* Spinner replacing the marker dot */}
+      {/* Arc spinner replacing the marker dot */}
       <div
         style={{
           width: S.lg,
           height: S.lg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          borderRadius: '50%',
+          border: `1.5px solid ${V.border}`,
+          borderTopColor: F.marker,
+          animation: 'bryllen-spin 0.85s linear infinite',
           flexShrink: 0,
           marginTop: 2,
-          color: F.marker,
-          animation: 'bryllen-spin 1s linear infinite',
+          boxSizing: 'border-box',
         }}
-      >
-        <Loader2 size={ICON.sm} strokeWidth={2} />
-      </div>
+      />
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
