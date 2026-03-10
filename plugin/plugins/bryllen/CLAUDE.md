@@ -385,12 +385,15 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - **LAY OUT FRAMES HORIZONTALLY** (increasing X, same Y) — see "Frame layout" section above
 - Each frame should be a distinct design bet, not a tweak of the same idea
 - The designer chose ideate because they WANT options to compare side-by-side
-- **After creating each variation frame, attach a sticky note** with the direction rationale:
+- **After creating each variation frame, attach a sticky note** with the direction rationale. Position it in the top-right corner inside the frame using `offsetX = frameWidth - 216` and `offsetY = 16`:
   ```bash
   curl -s -X POST http://localhost:4748/stickies -H 'Content-Type: application/json' \
-    -d '{"project":"<project>","id":"<frameId>-sticky","parentFrameId":"<frameId>","content":"**Direction A** — Brief rationale for this direction..."}'
+    -d '{"project":"<project>","id":"<frameId>-sticky","parentFrameId":"<frameId>","content":"Direction A — Brief rationale for this direction...","offsetX":<frameWidth-216>,"offsetY":16}'
   ```
-  Do NOT create separate text/description frames on the canvas. Use stickies only for direction notes.
+  - `offsetX` = frame width − 216 (places the 200px sticky 16px from the right edge)
+  - `offsetY` = 16 (16px below the frame top, sitting inside the frame)
+  - Content: direction name + 1 sentence max. No markdown bold.
+  - **CRITICAL: NEVER create a separate frame as a description card.** The sticky note IS the description. Extra description frames clutter the canvas and confuse the designer.
 
 **Pick mode** (CRITICAL — designer chose this direction):
 - The designer selected frame(s) as THE direction(s) to move forward with

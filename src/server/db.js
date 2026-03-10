@@ -99,7 +99,7 @@ export function initDb(bryllenDir) {
       parent_frame_id TEXT NOT NULL,
       content TEXT NOT NULL,
       offset_x REAL NOT NULL DEFAULT 0,
-      offset_y REAL NOT NULL DEFAULT -220,
+      offset_y REAL NOT NULL DEFAULT -40,
       created_at INTEGER DEFAULT (strftime('%s', 'now')),
       PRIMARY KEY (project, id)
     );
@@ -710,7 +710,7 @@ export function createSticky(project, { id, parentFrameId, content, offsetX, off
       content = excluded.content,
       offset_x = excluded.offset_x,
       offset_y = excluded.offset_y
-  `).run(id, project, parentFrameId, content, offsetX ?? 0, offsetY ?? -220, now)
+  `).run(id, project, parentFrameId, content, offsetX ?? 0, offsetY ?? -40, now)
 
   return getSticky(project, id)
 }

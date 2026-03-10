@@ -1,6 +1,5 @@
-import { useState, useRef } from 'react'
-import { StickyNote } from 'lucide-react'
-import { V, R, S, T, FONT, A } from './tokens'
+import { useRef } from 'react'
+import { S, T, FONT } from './tokens'
 import type { CanvasSticky } from './types'
 
 interface StickyProps {
@@ -11,6 +10,12 @@ interface StickyProps {
   selected: boolean
   onSelect: (id: string, shiftKey: boolean) => void
 }
+
+/* Sticky note — warm amber Post-it, visually distinct from frames */
+const STICKY_BG    = 'oklch(0.93 0.10 85)'   // warm amber yellow
+const STICKY_BG_SEL = 'oklch(0.88 0.13 82)'  // slightly deeper when selected
+const STICKY_TEXT  = 'oklch(0.32 0.07 75)'   // dark warm brown
+const STICKY_FOLD  = 'oklch(0.82 0.12 80)'   // fold corner (darker edge)
 
 export function Sticky({ sticky, x, y, zoom, selected, onSelect }: StickyProps) {
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
@@ -25,12 +30,13 @@ export function Sticky({ sticky, x, y, zoom, selected, onSelect }: StickyProps) 
     if (!pointerDownPos.current) return
     const dx = e.clientX - pointerDownPos.current.x
     const dy = e.clientY - pointerDownPos.current.y
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    if (dist < 5) {
+    if (Math.sqrt(dx * dx + dy * dy) < 5) {
       onSelect(sticky.id, e.shiftKey)
     }
     pointerDownPos.current = null
   }
+
+  const FOLD = 14  // folded corner size
 
   return (
     <div
@@ -40,41 +46,48 @@ export function Sticky({ sticky, x, y, zoom, selected, onSelect }: StickyProps) 
         position: 'absolute',
         left: x,
         top: y,
-        width: 280,
-        background: V.card,
-        border: `1px solid ${selected ? A.accent : V.border}`,
-        borderRadius: R.ui,
+        width: 200,
+        background: selected ? STICKY_BG_SEL : STICKY_BG,
+        // Folded corner via clip-path
+        clipPath: `polygon(0 0, calc(100% - ${FOLD}px) 0, 100% ${FOLD}px, 100% 100%, 0 100%)`,
         boxShadow: selected
-          ? `0 0 0 2px ${A.accent}, ${V.shadow}`
-          : V.shadow,
-        padding: `${S.sm}px ${S.md}px`,
+          ? `2px 4px 12px rgba(0,0,0,0.18)`
+          : `2px 3px 8px rgba(0,0,0,0.12)`,
+        padding: `${S.md}px ${S.md}px ${S.md}px ${S.md}px`,
         cursor: 'default',
         userSelect: 'none',
         fontFamily: FONT,
         fontSize: T.ui,
-        color: V.txtPri,
+        color: STICKY_TEXT,
         zIndex: 10,
-        transition: 'border-color 0.1s, box-shadow 0.1s',
+        transition: 'background 0.1s, box-shadow 0.1s',
         pointerEvents: 'auto',
       } as React.CSSProperties}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: S.xs }}>
-        <StickyNote
-          size={12}
-          style={{ color: V.txtSec, flexShrink: 0, marginTop: 1 }}
-          strokeWidth={1.5}
-        />
-        <span
-          style={{
-            lineHeight: 1.5,
-            color: V.txtPri,
-            textWrap: 'pretty',
-            whiteSpace: 'pre-wrap',
-          } as React.CSSProperties}
-        >
-          {sticky.content}
-        </span>
-      </div>
+      {/* Folded corner triangle */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: FOLD,
+          height: FOLD,
+          background: STICKY_FOLD,
+          clipPath: `polygon(0 0, 100% 100%, 100% 0)`,
+          pointerEvents: 'none',
+        }}
+      />
+      <span
+        style={{
+          lineHeight: 1.5,
+          color: STICKY_TEXT,
+          textWrap: 'pretty',
+          whiteSpace: 'pre-wrap',
+          display: 'block',
+        } as React.CSSProperties}
+      >
+        {sticky.content}
+      </span>
     </div>
   )
 }
