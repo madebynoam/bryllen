@@ -6,13 +6,7 @@ import type { ProjectManifest } from 'bryllen/runtime'
 const manifest: ProjectManifest = {
   id: 'bfaeb566-7983-455d-a1e4-d77ab32c6f15',
   project: 'canvai-launch-plan',
-  frames: [],
-  grid: {
-    columns: 4,
-    columnWidth: 320,
-    rowHeight: 200,
-    gap: 40,
-  },
+  components: {},
 }
 
 export default manifest

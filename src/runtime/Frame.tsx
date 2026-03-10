@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { useCanvas } from './Canvas'
-import { Star, Check, X } from 'lucide-react'
+import { Star, Check, X, MoreHorizontal, ExternalLink, Copy, Trash2 } from 'lucide-react'
 import { T, R, V, FONT } from './tokens'
 import type { FrameStatus } from './types'
 
@@ -21,6 +21,9 @@ interface FrameProps {
   onStatusChange?: (id: string, status: FrameStatus) => void
   selected?: boolean
   onSelect?: (id: string, shiftKey: boolean) => void
+  onDelete?: (id: string) => void
+  onDuplicateClick?: (id: string) => void
+  onOpenInNewTab?: (id: string) => void
 }
 
 const STATUS_ICONS: Record<FrameStatus, { icon: typeof Star; fill: string; stroke: string }> = {
@@ -32,15 +35,17 @@ const STATUS_ICONS: Record<FrameStatus, { icon: typeof Star; fill: string; strok
 
 const STATUS_ORDER: FrameStatus[] = ['none', 'starred', 'approved', 'rejected']
 
-function DropdownItem({ selected, onClick, icon: Icon, fill, stroke, label }: {
-  selected: boolean
+function DropdownItem({ selected = false, onClick, icon: Icon, fill, stroke, label, destructive = false }: {
+  selected?: boolean
   onClick: () => void
   icon: typeof Star
   fill: string
   stroke: string
   label: string
+  destructive?: boolean
 }) {
   const [hovered, setHovered] = useState(false)
+  const color = destructive ? 'oklch(55% 0.2 25)' : V.txtPri
   return (
     <button
       onClick={onClick}
@@ -58,21 +63,26 @@ function DropdownItem({ selected, onClick, icon: Icon, fill, stroke, label }: {
         cursor: 'default',
         fontSize: T.ui,
         fontFamily: FONT,
-        color: V.txtPri,
+        color,
         transition: 'background 0.1s ease',
       } as React.CSSProperties}
     >
-      <Icon size={14} fill={fill} stroke={stroke} strokeWidth={2} />
+      <Icon size={14} fill={fill} stroke={destructive ? 'oklch(55% 0.2 25)' : stroke} strokeWidth={2} />
       {label && <span style={{ textTransform: 'capitalize' }}>{label}</span>}
     </button>
   )
 }
 
-export function Frame({ id, title, x, y, width, height, children, onMove, onDuplicate, onResize, status = 'none', onStatusChange, selected = false, onSelect }: FrameProps) {
+function MenuSeparator() {
+  return <div style={{ height: 1, background: V.border, margin: '4px 0' }} />
+}
+
+export function Frame({ id, title, x, y, width, height, children, onMove, onDuplicate, onResize, status = 'none', onStatusChange, selected = false, onSelect, onDelete, onDuplicateClick, onOpenInNewTab }: FrameProps) {
   const { zoom } = useCanvas()
   const frameRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const statusButtonRef = useRef<HTMLButtonElement>(null)
+  const moreButtonRef = useRef<HTMLButtonElement>(null)
   const isDraggingRef = useRef(false)
   const dragStartRef = useRef({ x: 0, y: 0 })
   const frameStartRef = useRef({ x: 0, y: 0 })
@@ -84,6 +94,8 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
   const onSelectRef = useRef(onSelect)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false)
+  const [moreDropdownPos, setMoreDropdownPos] = useState({ top: 0, left: 0 })
 
   onMoveRef.current = onMove
   onDuplicateRef.current = onDuplicate
@@ -177,7 +189,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
     setDropdownOpen(false)
   }
 
-  // Close dropdown on outside click (with delay to avoid catching the opening click)
+  // Close status dropdown on outside click (with delay to avoid catching the opening click)
   useEffect(() => {
     if (!dropdownOpen) return
     const handleClick = () => setDropdownOpen(false)
@@ -191,8 +203,32 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
     }
   }, [dropdownOpen])
 
+  const handleMoreClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (!moreDropdownOpen && moreButtonRef.current) {
+      const rect = moreButtonRef.current.getBoundingClientRect()
+      setMoreDropdownPos({ top: rect.bottom + 4, left: rect.left })
+    }
+    setMoreDropdownOpen(o => !o)
+  }
+
+  // Close more dropdown on outside click
+  useEffect(() => {
+    if (!moreDropdownOpen) return
+    const handleClick = () => setMoreDropdownOpen(false)
+    const timer = setTimeout(() => {
+      window.addEventListener('click', handleClick)
+    }, 0)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('click', handleClick)
+    }
+  }, [moreDropdownOpen])
+
   const { icon: StatusIcon, fill, stroke } = STATUS_ICONS[status]
   const [statusHovered, setStatusHovered] = useState(false)
+  const [moreHovered, setMoreHovered] = useState(false)
   const iconSize = 12 / zoom
 
   // Selection ring style
@@ -220,9 +256,6 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
           fontSize: 12 / zoom,
           color: '#999',
           marginBottom: 8 / zoom,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
           userSelect: 'none',
           WebkitUserSelect: 'none',
           display: 'flex',
@@ -231,7 +264,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
         }}
       >
         {onStatusChange && (
-          <div style={{ position: 'relative', pointerEvents: 'auto' }}>
+          <div style={{ position: 'relative', pointerEvents: 'auto', flexShrink: 0 }}>
             <button
               ref={statusButtonRef}
               onClick={handleStatusClick}
@@ -294,7 +327,92 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
             )}
           </div>
         )}
-        <span data-frame-handle="true">{title}</span>
+        <span
+          data-frame-handle="true"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >{title}</span>
+        {(onOpenInNewTab || onDuplicateClick || onDelete) && (
+          <div style={{ position: 'relative', pointerEvents: 'auto', flexShrink: 0 }}>
+            <button
+              ref={moreButtonRef}
+              onClick={handleMoreClick}
+              onPointerDown={e => e.stopPropagation()}
+              onMouseEnter={() => setMoreHovered(true)}
+              onMouseLeave={() => setMoreHovered(false)}
+              style={{
+                background: moreHovered ? 'rgba(0,0,0,0.08)' : 'none',
+                border: 'none',
+                padding: 4,
+                margin: -4,
+                borderRadius: 4,
+                cursor: 'default',
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              <MoreHorizontal size={iconSize} stroke="#999" strokeWidth={2} />
+            </button>
+            {moreDropdownOpen && createPortal(
+              <div
+                onClick={e => e.stopPropagation()}
+                onPointerDown={e => e.stopPropagation()}
+                style={{
+                  position: 'fixed',
+                  top: moreDropdownPos.top,
+                  left: moreDropdownPos.left,
+                  background: V.card,
+                  border: `1px solid ${V.border}`,
+                  borderRadius: R.ui, cornerShape: 'squircle',
+                  boxShadow: V.shadow,
+                  padding: 4,
+                  zIndex: 99999,
+                  minWidth: 160,
+                  pointerEvents: 'auto',
+                } as React.CSSProperties}
+              >
+                {onOpenInNewTab && (
+                  <DropdownItem
+                    onClick={() => { onOpenInNewTab(id); setMoreDropdownOpen(false) }}
+                    icon={ExternalLink}
+                    fill="none"
+                    stroke="#999"
+                    label="Open in new tab"
+                  />
+                )}
+                {onDuplicateClick && (
+                  <DropdownItem
+                    onClick={() => { onDuplicateClick(id); setMoreDropdownOpen(false) }}
+                    icon={Copy}
+                    fill="none"
+                    stroke="#999"
+                    label="Duplicate"
+                  />
+                )}
+                {onDelete && (
+                  <>
+                    <MenuSeparator />
+                    <DropdownItem
+                      onClick={() => { onDelete(id); setMoreDropdownOpen(false) }}
+                      icon={Trash2}
+                      fill="none"
+                      stroke="#999"
+                      label="Delete"
+                      destructive
+                    />
+                  </>
+                )}
+              </div>,
+              document.body
+            )}
+          </div>
+        )}
       </div>
       <div ref={contentRef} data-frame-content="" style={{
         width,

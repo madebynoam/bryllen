@@ -644,6 +644,9 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   // Layout frames from the project
   const layoutedFrames = activeProject ? getLayoutedProjectFrames(activeProject) : []
 
+  // Preview mode: detect ?preview=<id> on mount
+  const previewFrameId = useMemo(() => new URLSearchParams(window.location.search).get('preview'), [])
+
   // Token panel state
   const [tokenPanelOpen, setTokenPanelOpen] = useState(false)
 
@@ -801,6 +804,25 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     persistConfig,
     isDbMode ? activeProject.components : undefined,
   )
+
+  // Duplicate from `...` menu: places copy to the right of the original
+  const handleDuplicateFromMenu = useCallback((id: string) => {
+    const source = frames.find(f => f.id === id)
+    if (!source) return
+    const newX = source.x + (source.width ?? 320) + 40
+    if (isDbMode) {
+      duplicateFrame(source, newX, source.y)
+    } else {
+      addFrame({ ...source, id: crypto.randomUUID(), x: newX, y: source.y, manuallyPositioned: true })
+    }
+  }, [frames, isDbMode, duplicateFrame, addFrame])
+
+  // Open frame in new tab (preview mode)
+  const handleOpenInNewTab = useCallback((id: string) => {
+    if (!activeProject?.project) return
+    const url = `${buildUrl(activeProject.project)}?preview=${encodeURIComponent(id)}`
+    window.open(url, '_blank')
+  }, [activeProject?.project])
 
   // Option+drag: stamp a copy at the origin while the dragged frame moves away.
   // DB mode: copy gets a new ID and is POSTed to the server — it's a real frame.
@@ -1186,6 +1208,29 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     )
   }
 
+  // Preview mode: render frame in isolation (after all hooks)
+  if (previewFrameId) {
+    const previewFrame = frames.find(f => f.id === previewFrameId)
+    if (!previewFrame) return <div>Loading…</div>
+
+    const isWide = (previewFrame.width ?? 0) >= 1200
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        alignItems: isWide ? 'flex-start' : 'center',
+        justifyContent: isWide ? 'flex-start' : 'center',
+        background: isWide ? 'transparent' : 'oklch(94% 0.003 80)',
+        overflow: 'auto',
+      }}>
+        {'component' in previewFrame && (
+          <previewFrame.component {...(previewFrame.props ?? {})} />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div id="bryllen-root" style={{ ...cssVars, width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' } as React.CSSProperties}>
       <TopBar
@@ -1256,6 +1301,9 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
                   onStatusChange={handleFrameStatusChange}
                   selected={selectedFrameIds.has(frame.id)}
                   onSelect={handleFrameSelect}
+                  onDelete={removeFrame}
+                  onDuplicateClick={handleDuplicateFromMenu}
+                  onOpenInNewTab={handleOpenInNewTab}
                 >
                   {'component' in frame && <frame.component {...(frame.props ?? {})} />}
                 </Frame>
