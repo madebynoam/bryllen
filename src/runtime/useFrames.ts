@@ -117,12 +117,27 @@ function resolveDbFrames(dbFrames: DbFrame[], components: Record<string, Compone
         height: f.height ?? 900,
       })
     } else if (f.componentKey) {
-      const registryKeys = Object.keys(components)
-      console.warn(
-        `[bryllen] Frame "${f.title}" (id=${f.id}) dropped: componentKey "${f.componentKey}" not found in manifest.components. ` +
-        `Registry has: [${registryKeys.join(', ') || 'EMPTY'}]. ` +
-        `Did you forget to add the import to manifest.ts?`
-      )
+      // Show error placeholder instead of silently dropping unresolvable frames
+      const missingKey = f.componentKey
+      resolved.push({
+        type: 'component',
+        id: f.id,
+        title: `${f.title} (missing)`,
+        component: () => (
+          <div style={{ padding: 40, color: '#c00', fontFamily: 'monospace', fontSize: 14 }}>
+            <strong>Component not found</strong><br/>
+            <code>{missingKey}</code> is registered in the database but missing from manifest.components.<br/>
+            Add the import to manifest.ts or delete this frame.
+          </div>
+        ),
+        componentKey: f.componentKey,
+        props: {},
+        x: 0,
+        y: 0,
+        width: f.width ?? 1440,
+        height: f.height ?? 200,
+      })
+      console.warn(`[bryllen] Frame "${f.title}": componentKey "${f.componentKey}" not in registry`)
     }
   }
   return resolved
@@ -227,6 +242,7 @@ export function useFrames(
   const positionsLoadedRef = useRef(false)
   const componentsRegistryRef = useRef(componentsRegistry)
   componentsRegistryRef.current = componentsRegistry
+  const initialLoadCompleteRef = useRef(false)
 
   const sourceKey = isDbMode ? '__db__' : frameIdsKey(effectiveSource)
   sourceKeyRef.current = sourceKey
@@ -237,6 +253,9 @@ export function useFrames(
   } else if (effectiveSource.length > 0) {
     effectiveConfigRef.current = { columns: inferColumns(effectiveSource) }
   }
+
+  // Stable key derived from component registry — triggers re-registration when components change
+  const registryKey = componentsRegistry ? Object.keys(componentsRegistry).sort().join(',') : ''
 
   // DB mode: load frames from server, auto-register missing components, listen for SSE updates
   useEffect(() => {
@@ -315,12 +334,14 @@ export function useFrames(
       setFrames(layouted)
       measuredHeightsRef.current = {}
       positionsLoadedRef.current = true
+      initialLoadCompleteRef.current = true
     }
 
+    initialLoadCompleteRef.current = false
     loadFromDb()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDbMode, persistConfig?.project])
+  }, [isDbMode, persistConfig?.project, registryKey])
 
   // DB mode: SSE listener for frame-created / frame-deleted / frame-updated
   useEffect(() => {
@@ -333,6 +354,8 @@ export function useFrames(
       try {
         const data = JSON.parse(e.data)
         if (data.type === 'frame-created' || data.type === 'frame-deleted' || data.type === 'frame-updated') {
+          // Skip SSE events until initial load completes to avoid race conditions
+          if (!initialLoadCompleteRef.current) return
           // Re-fetch all frames from DB
           loadDbFrames(project).then(dbFrames => {
             const registry = componentsRegistryRef.current ?? {}

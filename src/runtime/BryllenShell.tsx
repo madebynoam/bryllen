@@ -22,6 +22,7 @@ import { ThemeProvider, useTheme } from './useTheme'
 import { TokenPanel, TokenPanelToggle } from './TokenPanel'
 import { Sticky } from './Sticky'
 import { ProgressPanel } from './ProgressPanel'
+import { FrameErrorBoundary } from './FrameErrorBoundary'
 import type { ProjectManifest, CanvasImageFrame, FrameStatus, ManifestFrame, CanvasFrame, CanvasSticky } from './types'
 
 interface BryllenShellProps {
@@ -820,7 +821,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       .catch(() => setFrameStatuses({}))
   }, [activeProject?.project, annotationEndpoint])
 
-  const isDbMode = !!(activeProject?.components)
+  const isDbMode = !!(activeProject?.components && Object.keys(activeProject.components).length > 0)
   const persistConfig = activeProject?.project
     ? { project: activeProject.project, page: 'canvas' }
     : undefined
@@ -1319,7 +1320,9 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
                   onDuplicateClick={handleDuplicateFromMenu}
                   onOpenInNewTab={handleOpenInNewTab}
                 >
-                  {'component' in frame && <frame.component {...(frame.props ?? {})} />}
+                  <FrameErrorBoundary frameId={frame.id} title={frame.title}>
+                    {'component' in frame && <frame.component {...(frame.props ?? {})} />}
+                  </FrameErrorBoundary>
                 </Frame>
               ))}
               {/* Render pasted images */}
