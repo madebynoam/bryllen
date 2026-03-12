@@ -68,5 +68,9 @@ echo "  .bryllen-version marker OK."
 echo "==> Running tsc --noEmit..."
 npx tsc --noEmit 2>&1
 
+# Vite build — catches esbuild pre-bundling issues (JSX in .ts, bad exports, etc.)
+echo "==> Running vite build..."
+npx vite build 2>&1
+
 echo ""
 echo "==> Smoke test PASSED"
