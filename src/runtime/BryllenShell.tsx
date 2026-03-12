@@ -837,7 +837,9 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       .catch(() => setFrameStatuses({}))
   }, [activeProject?.project, annotationEndpoint])
 
-  const isDbMode = !!(activeProject?.components && Object.keys(activeProject.components).length > 0)
+  // DB mode: manifest has components key defined (even if empty {})
+  // Manifest mode: no components key, uses iterations/frames structure
+  const isDbMode = activeProject?.components !== undefined
   const persistConfig = activeProject?.project
     ? { project: activeProject.project, page: 'canvas' }
     : undefined

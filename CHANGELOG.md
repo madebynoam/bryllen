@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.149 — Fix preview mode (Open In New Tab)
+
+**Fixed "Open In New Tab" stuck on loading.** Preview mode was broken because the DB mode detection changed in 0.0.145 to require `Object.keys(components).length > 0`. Since migrated projects have `components: {}` (empty), they were incorrectly treated as manifest mode instead of DB mode, causing frames to never load from the database.
+
+- **Root cause:** `isDbMode` check required non-empty components object, but all manifests have empty `components: {}` after migration
+- **Fix:** Changed check to `activeProject?.components !== undefined` — any manifest with `components` key is DB mode, even if empty
+- **Impact:** Preview mode now works — clicking "Open In New Tab" from frame menu correctly loads and displays the frame
+
 ## 0.0.144 — Auto-register frames (no more invisible frames)
 
 **Frames now auto-register.** Adding a component to `manifest.components` is all that's needed — the runtime auto-creates DB frame records for any component missing one. No more `POST /frames` step.
