@@ -74,7 +74,11 @@ node -e "
   const content = \"// This version is updated by scripts/bump-version.sh\nexport const VERSION = '$VERSION'\n\";
   fs.writeFileSync(path, content);
 "
-echo "  5/5 src/runtime/version.ts"
+echo "  5/6 src/runtime/version.ts"
+
+# 6. Regenerate changelog.json from CHANGELOG.md
+node "$ROOT/scripts/generate-changelog-json.cjs"
+echo "  6/6 src/runtime/changelog.json"
 
 echo ""
-echo "All 6 version fields bumped to $VERSION"
+echo "All version fields bumped to $VERSION"

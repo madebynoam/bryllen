@@ -4,6 +4,7 @@ import { S, T, ICON, FONT, V } from './tokens'
 import { useMenu, MenuPanel, MenuRow } from './Menu'
 import { resetTourCompleted } from './TourOverlay'
 import { useTheme, type ThemeMode } from './useTheme'
+import { ChangelogDialog } from './ChangelogDialog'
 
 const GITHUB_URL = 'https://github.com/madebynoam/bryllen'
 
@@ -13,6 +14,7 @@ export function InfoButton() {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [rect, setRect] = useState<DOMRect | null>(null)
   const { mode, setMode } = useTheme()
+  const [changelogOpen, setChangelogOpen] = useState(false)
 
   // Theme cycling: system → light → dark → system
   const cycleTheme = () => {
@@ -31,6 +33,7 @@ export function InfoButton() {
   }, [open])
 
   return (
+    <>
     <div ref={containerRef} style={{ display: 'inline-flex' }}>
       <button
         ref={triggerRef}
@@ -85,6 +88,16 @@ export function InfoButton() {
             v{typeof __BRYLLEN_VERSION__ !== 'undefined' ? __BRYLLEN_VERSION__ : '0.0.0'}
           </div>
           <MenuRow
+            onClick={() => { setChangelogOpen(true); setOpen(false) }}
+            style={{
+              padding: `${S.xs}px ${S.sm}px`,
+              fontSize: T.ui,
+              color: V.txtSec,
+            }}
+          >
+            What's new
+          </MenuRow>
+          <MenuRow
             onClick={() => {
               resetTourCompleted()
               window.location.reload()
@@ -112,5 +125,7 @@ export function InfoButton() {
         </MenuPanel>
       )}
     </div>
+    <ChangelogDialog open={changelogOpen} onClose={() => setChangelogOpen(false)} />
+    </>
   )
 }
