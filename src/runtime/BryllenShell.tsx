@@ -421,6 +421,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   const [commentCount, setCommentCount] = useState(0)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [creatingProject, setCreatingProject] = useState<{ name: string; annotationId: string } | null>(null)
   const [panelAnnotationId, setPanelAnnotationId] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const panelCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -473,6 +474,13 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
 
   const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
 
+  // Clear creating state once manifests appear (project was created, HMR picked it up)
+  useEffect(() => {
+    if (creatingProject && manifests.length > 0) {
+      setCreatingProject(null)
+    }
+  }, [manifests.length, creatingProject])
+
   const handleNewProject = useCallback(async (payload: { name: string; description: string; prompt: string; images?: Array<{ id: string; dataUrl: string; filename: string }> }) => {
     try {
       // Upload inspiration images to context folder
@@ -495,16 +503,19 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       // Store in active project's db so the agent can find it with --project and the spinner shows
       const { images: _, ...projectPayload } = payload
       const projectParam = activeProject?.project ? `?projectId=${encodeURIComponent(activeProject.project)}` : ''
-      await fetch(`${annotationEndpoint}/annotations${projectParam}`, {
+      const res = await fetch(`${annotationEndpoint}/annotations${projectParam}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'project', comment: JSON.stringify(projectPayload) }),
       })
-      showToast('Project submitted')
+      if (!res.ok) throw new Error('Failed to create annotation')
+      const annotation = await res.json()
+      setProjectDialogOpen(false)
+      setCreatingProject({ name: payload.name, annotationId: String(annotation.id) })
     } catch {
       showToast('Failed to submit')
     }
-  }, [annotationEndpoint, showToast, activeProject?.project])
+  }, [annotationEndpoint, activeProject?.project])
 
 
   // Handle prompt request submission (from agent's /bryllen-new without prompt)
@@ -1147,40 +1158,87 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         backgroundColor: V.canvas,
         fontFamily: FONT,
       } as React.CSSProperties}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: S.lg,
-          padding: S.xxl,
-          background: V.card,
-          border: `1px solid ${V.border}`,
-          borderRadius: R.ui, cornerShape: 'squircle',
-          maxWidth: 400,
-          textAlign: 'center',
-        } as React.CSSProperties}>
-          <h2 style={{
-            fontSize: T.ui,
-            fontWeight: 600,
-            color: V.txtPri,
-            margin: 0,
-            textWrap: 'pretty',
+        {creatingProject ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: S.lg,
+            maxWidth: 320,
+            textAlign: 'center',
+          }}>
+            {/* Spinner */}
+            <div style={{
+              width: 32,
+              height: 32,
+              border: `2.5px solid ${V.border}`,
+              borderTopColor: V.txtPri,
+              borderRadius: '50%',
+              animation: 'bryllen-spin 0.8s linear infinite',
+            }} />
+            <style>{`@keyframes bryllen-spin { to { transform: rotate(360deg) } }`}</style>
+            <h2 style={{
+              fontSize: T.ui,
+              fontWeight: 600,
+              color: V.txtPri,
+              margin: 0,
+            }}>
+              Creating {creatingProject.name}
+            </h2>
+            <p style={{
+              fontSize: T.ui,
+              color: V.txtSec,
+              margin: 0,
+              lineHeight: 1.5,
+            }}>
+              Waiting for Claude to set up the project...
+            </p>
+            <div style={{ width: 280, marginTop: S.md }}>
+              <ProgressPanel
+                annotationId={creatingProject.annotationId}
+                endpoint={annotationEndpoint}
+                project={creatingProject.name}
+                projectId={creatingProject.name}
+                onDismiss={() => {}}
+              />
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: S.lg,
+            padding: S.xxl,
+            background: V.card,
+            border: `1px solid ${V.border}`,
+            borderRadius: R.ui, cornerShape: 'squircle',
+            maxWidth: 400,
+            textAlign: 'center',
           } as React.CSSProperties}>
-            Start a new project
-          </h2>
-          <p style={{
-            fontSize: T.ui,
-            color: V.txtSec,
-            margin: 0,
-            lineHeight: 1.5,
-            textWrap: 'pretty',
-          } as React.CSSProperties}>
-            Describe what you're designing and the agent will set it up
-          </p>
-          <ActionButton variant="primary" onClick={() => setProjectDialogOpen(true)}>
-            New Project
-          </ActionButton>
-        </div>
+            <h2 style={{
+              fontSize: T.ui,
+              fontWeight: 600,
+              color: V.txtPri,
+              margin: 0,
+              textWrap: 'pretty',
+            } as React.CSSProperties}>
+              Start a new project
+            </h2>
+            <p style={{
+              fontSize: T.ui,
+              color: V.txtSec,
+              margin: 0,
+              lineHeight: 1.5,
+              textWrap: 'pretty',
+            } as React.CSSProperties}>
+              Describe what you're designing and the agent will set it up
+            </p>
+            <ActionButton variant="primary" onClick={() => setProjectDialogOpen(true)}>
+              New Project
+            </ActionButton>
+          </div>
+        )}
         <NewProjectDialog
           open={projectDialogOpen}
           onClose={() => setProjectDialogOpen(false)}
