@@ -531,9 +531,9 @@ async function contextImages() {
   console.log(JSON.stringify({ images: allImages }, null, 2))
 }
 
-function scaffold() {
-  const cwd = process.cwd()
-
+// Idempotent core — writes boilerplate files, creates src/projects/, writes version marker.
+// Returns { wrote, skipped, missingDeps } without side effects or process.exit().
+function ensureScaffold(cwd) {
   const files = [
     ['index.html', indexHtml],
     ['vite.config.ts', viteConfig],
@@ -573,11 +573,8 @@ function scaffold() {
 
   // Write .bryllen-version marker
   writeMarker(cwd, getBryllenVersion())
-  console.log('  created .bryllen-version')
 
-  if (wrote === 0) {
-    console.log('All scaffold files already exist — nothing to write.')
-  } else {
+  if (wrote > 0) {
     console.log(`\nScaffolded ${wrote} file${wrote === 1 ? '' : 's'}${skipped ? ` (${skipped} already existed)` : ''}.`)
   }
 
@@ -587,11 +584,19 @@ function scaffold() {
     '@vitejs/plugin-react', 'vite', 'typescript',
     '@types/react', '@types/react-dom',
   ]
-  const missing = needed.filter(dep => !existsSync(join(cwd, 'node_modules', dep)))
+  const missingDeps = needed.filter(dep => !existsSync(join(cwd, 'node_modules', dep)))
 
-  if (missing.length > 0) {
-    console.log(`\nInstalling dependencies: ${missing.join(', ')}`)
-    const install = spawn('npm', ['install', '--save-dev', ...missing], {
+  return { wrote, skipped, missingDeps }
+}
+
+// `bryllen new` — thin wrapper around ensureScaffold that also installs deps and exits.
+function scaffold() {
+  const cwd = process.cwd()
+  const { missingDeps } = ensureScaffold(cwd)
+
+  if (missingDeps.length > 0) {
+    console.log(`\nInstalling dependencies: ${missingDeps.join(', ')}`)
+    const install = spawn('npm', ['install', '--save-dev', ...missingDeps], {
       cwd,
       stdio: 'inherit',
       shell: true,
@@ -732,6 +737,14 @@ async function startDev() {
   const applied = runMigrations(cwd)
   if (applied > 0) {
     console.log(`Applied ${applied} migration${applied === 1 ? '' : 's'}.\n`)
+  }
+
+  // Auto-scaffold on fresh installs (idempotent — safe to run every time)
+  const { wrote: scaffoldWrote, missingDeps } = ensureScaffold(cwd)
+  if (scaffoldWrote > 0) console.log(`[bryllen] Scaffolded ${scaffoldWrote} file(s).`)
+  if (missingDeps.length > 0) {
+    console.log(`[bryllen] Installing dependencies: ${missingDeps.join(' ')}`)
+    execSync(`npm install --save-dev ${missingDeps.join(' ')}`, { cwd, stdio: 'inherit' })
   }
 
   // Find free ports (cleanup above should free the preferred ones)
@@ -936,8 +949,8 @@ switch (command) {
   default:
     console.log('Bryllen — design studio on an infinite canvas\n')
     console.log('Usage:')
-    console.log('  bryllen new                  Scaffold project files')
-    console.log('  bryllen design               Start dev server + annotation server')
+    console.log('  bryllen design               Start dev server (auto-scaffolds on first run)')
+    console.log('  bryllen new                  Scaffold project files only (backward compat)')
     console.log('  bryllen update               Update bryllen to latest')
     console.log('  bryllen doctor               Check and fix project files')
     console.log('')

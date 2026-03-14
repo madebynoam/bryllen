@@ -19,7 +19,7 @@ export function ProjectPicker({ projects, activeIndex, onSelect, forceOpen = fal
       onSelect={onSelect}
       forceOpen={forceOpen}
       width={220}
-      footer={import.meta.env.DEV && onNewProject ? (
+      footer={onNewProject ? (
         <MenuRow
           onClick={onNewProject}
           icon={<Plus size={ICON.md} strokeWidth={1.5} style={{ color: V.txtSec }} />}

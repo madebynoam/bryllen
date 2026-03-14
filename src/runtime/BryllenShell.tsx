@@ -3,7 +3,6 @@ import { X, Star, Check, ChevronDown, StickyNote } from 'lucide-react'
 import { Canvas } from './Canvas'
 import { Frame } from './Frame'
 import { useFrames } from './useFrames'
-import { layoutFrames } from './layout'
 import { TopBar } from './TopBar'
 import { AnnotationOverlay } from './AnnotationOverlay'
 import { CommentOverlay } from './CommentOverlay'
@@ -23,7 +22,7 @@ import { TokenPanel, TokenPanelToggle } from './TokenPanel'
 import { Sticky } from './Sticky'
 import { ProgressPanel } from './ProgressPanel'
 import { FrameErrorBoundary } from './FrameErrorBoundary'
-import type { ProjectManifest, CanvasImageFrame, FrameStatus, ManifestFrame, CanvasFrame, CanvasSticky } from './types'
+import type { ProjectManifest, CanvasImageFrame, FrameStatus, CanvasFrame, CanvasSticky } from './types'
 
 interface BryllenShellProps {
   manifests: ProjectManifest[]
@@ -631,64 +630,6 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     }
   }, [activeProject?.project])
 
-  // Get frames from either flat structure or legacy iterations structure
-  const getLayoutedProjectFrames = (project: ProjectManifest | undefined): CanvasFrame[] => {
-    if (!project) return []
-
-    // New flat structure
-    if (project.frames && project.frames.length > 0) {
-      return layoutFrames(project.frames, project.grid)
-    }
-
-    // Legacy iterations structure - layout iterations HORIZONTALLY, pages within each VERTICALLY
-    if (project.iterations && project.iterations.length > 0) {
-      const allFrames: CanvasFrame[] = []
-      const ORIGIN_X = 100
-      const ORIGIN_Y = 100
-      const ITERATION_GAP = 200 // Gap between iterations (horizontal)
-      const PAGE_GAP = 100 // Gap between pages within iteration (vertical)
-
-      let currentX = ORIGIN_X
-
-      for (const iteration of project.iterations) {
-        let currentY = ORIGIN_Y
-        let iterationMaxX = currentX // Track the rightmost edge of this iteration
-
-        for (const page of iteration.pages ?? []) {
-          if (!page.frames || page.frames.length === 0) continue
-
-          // Layout this page's frames
-          const pageFrames = layoutFrames(page.frames, page.grid)
-
-          // Offset frames to current position
-          const offsetFrames = pageFrames.map(f => ({
-            ...f,
-            x: f.x - ORIGIN_X + currentX, // Offset X by iteration column
-            y: f.y - ORIGIN_Y + currentY, // Offset Y within iteration
-          }))
-
-          allFrames.push(...offsetFrames)
-
-          // Track the rightmost edge of this page
-          const pageMaxX = Math.max(...offsetFrames.map(f => f.x + f.width))
-          if (pageMaxX > iterationMaxX) iterationMaxX = pageMaxX
-
-          // Move Y down for next page
-          const pageMaxY = Math.max(...offsetFrames.map(f => f.y + f.height))
-          currentY = pageMaxY + PAGE_GAP
-        }
-
-        // Move X right for next iteration
-        currentX = iterationMaxX + ITERATION_GAP
-      }
-      return allFrames
-    }
-    return []
-  }
-
-  // Layout frames from the project
-  const layoutedFrames = activeProject ? getLayoutedProjectFrames(activeProject) : []
-
   // Preview mode: detect ?preview=<id> on mount
   const previewFrameId = useMemo(() => new URLSearchParams(window.location.search).get('preview'), [])
 
@@ -837,19 +778,13 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       .catch(() => setFrameStatuses({}))
   }, [activeProject?.project, annotationEndpoint])
 
-  // DB mode: manifest has components key defined (even if empty {})
-  // Manifest mode: no components key, uses iterations/frames structure
-  const isDbMode = activeProject?.components !== undefined
   const persistConfig = activeProject?.project
     ? { project: activeProject.project, page: 'canvas' }
     : undefined
-  // DB mode: pass undefined so useFrames fetches from /frames API
-  // Manifest mode: pass layoutedFrames as before
   const { frames, addFrame, updateFrame, removeFrame, duplicateFrame, handleResize } = useFrames(
-    isDbMode ? undefined : layoutedFrames,
     activeProject?.grid,
     persistConfig,
-    isDbMode ? activeProject.components : undefined,
+    activeProject?.components,
   )
 
   // Duplicate from `...` menu: places copy to the right of the original
@@ -869,8 +804,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
 
   // Option+drag: stamp a copy at the origin while the dragged frame moves away.
   // The copy is persisted at the origin; the dragged frame keeps moving.
-  // In DB mode the copy gets a new ID (POSTed to server).
-  // In manifest mode the copy also gets a new ID (clone mapping saved).
+  // The copy gets a new ID and component file (POSTed to server).
   const handleFrameDuplicate = useCallback((id: string, origX: number, origY: number): string => {
     const source = frames.find(f => f.id === id)
     if (!source) return id
@@ -1229,13 +1163,11 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
             New Project
           </ActionButton>
         </div>
-        {import.meta.env.DEV && (
-          <NewProjectDialog
-            open={projectDialogOpen}
-            onClose={() => setProjectDialogOpen(false)}
-            onSubmit={handleNewProject}
-          />
-        )}
+        <NewProjectDialog
+          open={projectDialogOpen}
+          onClose={() => setProjectDialogOpen(false)}
+          onSubmit={handleNewProject}
+        />
         {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </div>
     )
@@ -1421,13 +1353,11 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       {import.meta.env.DEV && <AnnotationOverlay endpoint={annotationEndpoint} frames={[...frames, ...currentPageImages]} showToast={showToast} project={projectKey} projectId={activeProject?.project} />}
       {/* Comment overlay hidden for now */}
       {/* <CommentOverlay endpoint={annotationEndpoint} frames={frames} onCommentCountChange={setCommentCount} /> */}
-      {import.meta.env.DEV && (
-        <NewProjectDialog
-          open={projectDialogOpen}
-          onClose={() => setProjectDialogOpen(false)}
-          onSubmit={handleNewProject}
-        />
-      )}
+      <NewProjectDialog
+        open={projectDialogOpen}
+        onClose={() => setProjectDialogOpen(false)}
+        onSubmit={handleNewProject}
+      />
 
       {/* Prompt request dialog (from agent's /bryllen-new without prompt) */}
       {promptRequest && (

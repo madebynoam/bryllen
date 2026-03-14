@@ -31,6 +31,13 @@ Start the Bryllen dev server and enter watch mode.
 
 3. **Confirm:** "Dev server running. Canvas at http://localhost:5173"
 
+3.5. **Check for existing projects:**
+   ```bash
+   ls src/projects/ 2>/dev/null
+   ```
+   - If the directory is empty or missing: tell the designer **"Canvas is live at http://localhost:5173 — click 'New Project' to start designing"** and go straight to step 6 (watch loop). The watch loop already handles the `type: 'project'` annotation that the New Project dialog sends.
+   - If projects exist: continue to step 4 (drain backlog).
+
 4. **Drain backlog:** Run `npx bryllen pending` to check for annotations that arrived before the session started. Process each one following the guard protocol.
 
 5. **Check for context images:** Before generating any designs, run:

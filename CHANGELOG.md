@@ -1,20 +1,42 @@
 # Changelog
 
+## 0.1.0 — Remove DB Mode Conditionals (Breaking Change)
+
+**BREAKING:** Removed manifest mode support. All projects must use the component registry pattern (frames stored in SQLite).
+
+**What changed:**
+- Removed manifest mode code paths (~370-420 lines of code)
+- Removed `ProjectManifest.frames` and `ProjectManifest.iterations` fields
+- Removed `deleted_frames` and `cloned_frames` database tables
+- Removed manifest-mode HTTP endpoints (`POST /frame-positions/clone`, `POST /frame-positions/delete`)
+- Simplified `useFrames` hook signature (no `sourceFrames` parameter)
+- Removed `layoutFrames()` and `layoutProject()` functions
+- Removed `ManifestFrame`, `ComponentFrame`, `ImageFrame`, `PageManifest`, `IterationManifest` types
+
+**Benefits:**
+- Simpler codebase with single standard pattern
+- Eliminated 8+ conditional branches
+- Easier to understand and maintain
+- Clearer documentation without "mode" concept
+
+**Migration:**
+Old manifest-based projects will not work with this version. The component registry pattern has been the standard since 0.0.119.
+
 ## 0.0.149 — Fix preview mode (Open In New Tab)
 
-**Fixed "Open In New Tab" stuck on loading.** Preview mode was broken because the DB mode detection changed in 0.0.145 to require `Object.keys(components).length > 0`. Since migrated projects have `components: {}` (empty), they were incorrectly treated as manifest mode instead of DB mode, causing frames to never load from the database.
+**Fixed "Open In New Tab" stuck on loading.** Preview mode was broken because the frame detection logic required a non-empty components object. Since migrated projects have `components: {}` (empty), frames weren't loading from the database.
 
-- **Root cause:** `isDbMode` check required non-empty components object, but all manifests have empty `components: {}` after migration
-- **Fix:** Changed check to `activeProject?.components !== undefined` — any manifest with `components` key is DB mode, even if empty
+- **Root cause:** Frame loading check required non-empty components object, but migrated manifests have empty `components: {}`
+- **Fix:** Changed check to `activeProject?.components !== undefined` — any manifest with `components` key loads frames from SQLite
 - **Impact:** Preview mode now works — clicking "Open In New Tab" from frame menu correctly loads and displays the frame
 
 ## 0.0.144 — Auto-register frames (no more invisible frames)
 
-**Frames now auto-register.** Adding a component to `manifest.components` is all that's needed — the runtime auto-creates DB frame records for any component missing one. No more `POST /frames` step.
+**Frames now auto-register.** Adding a component to `manifest.components` is all that's needed — the runtime auto-creates frame records in SQLite for any component missing one. No more `POST /frames` step.
 
-- **Auto-registration:** `useFrames` compares registry keys vs DB frames on load, auto-POSTs any missing
+- **Auto-registration:** `useFrames` compares registry keys vs stored frames on load, auto-POSTs any missing
 - **Auto-layout:** New frames are positioned in a horizontal grid instead of stacking at (0,0). Incremental frames go right of the rightmost existing frame
-- **Console warnings:** `resolveDbFrames` now logs when a frame is dropped due to componentKey mismatch
+- **Console warnings:** Frame resolution now logs when a frame is dropped due to componentKey mismatch
 - **Killed AllDirectionsPage concept:** Each direction is its own canvas frame. The canvas IS the all-directions view
 - **Updated skills:** Removed POST /frames from all agent instructions — manifest is the single source of truth
 

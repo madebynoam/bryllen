@@ -36,7 +36,7 @@ Bryllen is a canvas for Claude Code design. An infinite, zoomable surface where 
 
 ## User workflow
 
-1. `/bryllen-new <name>` — create project, start dev server
+1. `/bryllen-design` — start dev server (auto-scaffolds); click "New Project" in the canvas
 2. Describe — agent generates multiple directions on the canvas
 3. Annotate — designer clicks elements, types changes, clicks Apply
 4. Iterate — designer clicks "New Iteration" for snapshot copies
@@ -57,26 +57,24 @@ src/projects/<name>/
   CHANGELOG.md
 ```
 
-## Manifest formats (CRITICAL)
+## Manifest format (CRITICAL)
 
-There are two manifest modes. Check which one the project uses before editing.
-
-### DB-driven mode (new projects — `components: {}`)
+Bryllen projects use a component registry pattern where frame metadata lives in SQLite.
 
 ```ts
 const manifest: ProjectManifest = {
   id: '...',
   project: 'my-project',
   components: {
-    'dir-a': DirA,       // maps frame ID → React component
+    'dir-a': DirA,       // maps component key → React component
     'dir-b': DirB,
   },
 }
 ```
 
-**Frame metadata (title, width, height, order) lives in SQLite, NOT the manifest.**
+**Frame metadata (title, width, height, position, order) is stored in SQLite, NOT the manifest.**
 
-**Agent workflow in DB mode (2 steps — that's it):**
+**Agent workflow (2 steps):**
 1. Create component file (`DirA.tsx`, etc.)
 2. Add import + entry to `manifest.components`
 
@@ -92,10 +90,6 @@ curl -X POST http://localhost:4748/frames -H 'Content-Type: application/json' \
 - Delete: `DELETE http://localhost:4748/frames/dir-a?project=my-project`
 - Rename: `PUT http://localhost:4748/frames/dir-a?project=my-project` with `{ "title": "New Name" }`
 - Reorder: `PUT` with `{ "sortOrder": 2 }`
-
-### Manifest mode (existing projects — `frames: [...]`)
-
-Old format still works. Agent edits the `frames` array directly (triggers Vite reload). No migration needed — backward compat is preserved.
 
 ## Component hierarchy (MANDATORY — read this)
 
@@ -120,9 +114,7 @@ Pages (v<N>/pages/)           → import ONLY from ../components/
    - Add export to `v<N>/components/index.ts`
    - Add to Components showcase page
 3. **THEN create the page** — import components from `../components/`
-4. **Register the frame:**
-   - **DB mode** (`components: {}`): Add import + entry to `manifest.components` — frames are auto-registered in DB on reload
-   - **Manifest mode** (`frames: []`): Add frame object to `frames` array directly
+4. **Register the frame:** Add import + entry to `manifest.components` — frames are auto-registered in DB on reload
 
 ### Example — Dashboard with cards:
 
@@ -576,8 +568,8 @@ For iterations/projects (longer operations), add more:
 
 ## Skills
 
-- `/bryllen-new <name>` — Create project and start designing
-- `/bryllen-design` — Start dev server and watch mode
+- `/bryllen-design` — **Primary entry point.** Start dev server, auto-scaffold if needed, watch for annotations
+- `/bryllen-new <name>` — Internal/backward compat: explicit scaffold + design generation
 - `/bryllen-share` — Build and deploy to GitHub Pages
 - `/bryllen-close` — Stop dev servers
 - `/bryllen-update` — Update bryllen
