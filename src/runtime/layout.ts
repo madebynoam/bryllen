@@ -48,9 +48,11 @@ export function relayoutFrames(
     if (frame.manuallyPositioned) return frame
 
     const row = Math.floor(index / columns)
+    const measured = measuredHeights[frame.id]
     return {
       ...frame,
       y: rowYPositions[row],
+      ...(measured != null ? { height: measured } : {}),
     }
   })
 }
