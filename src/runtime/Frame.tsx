@@ -416,7 +416,6 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
       </div>
       <div ref={contentRef} data-frame-content="" style={{
         width,
-        height,
         overflow: 'hidden',
       }}>
         {children}
