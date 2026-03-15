@@ -32,6 +32,20 @@ interface BryllenShellProps {
 /** Lightweight preview mode — resolves component directly from manifest */
 function PreviewMode({ manifest }: { manifest: ProjectManifest }) {
   const previewId = new URLSearchParams(window.location.search).get('preview')
+
+  // Override root overflow:hidden so the preview can scroll
+  useEffect(() => {
+    const root = document.getElementById('root')
+    if (root) root.style.overflow = 'auto'
+    document.body.style.overflow = 'auto'
+    document.documentElement.style.overflow = 'auto'
+    return () => {
+      if (root) root.style.overflow = ''
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+  }, [])
+
   if (!previewId) return null
 
   const components = manifest.components ?? {}
