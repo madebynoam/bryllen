@@ -827,10 +827,17 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   }, [frames, duplicateFrame])
 
   // Open frame in new tab (preview mode)
+  // Uses a temporary <a> element instead of window.open to avoid popup blockers
   const handleOpenInNewTab = useCallback((id: string) => {
     if (!activeProject?.project) return
     const url = `${buildUrl(activeProject.project)}?preview=${encodeURIComponent(id)}`
-    window.open(url, '_blank')
+    const a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }, [activeProject?.project])
 
   // Option+drag: stamp a copy at the origin while the dragged frame moves away.
@@ -1275,7 +1282,22 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
   // Preview mode: render frame in isolation (after all hooks)
   if (previewFrameId) {
     const previewFrame = frames.find(f => f.id === previewFrameId)
-    if (!previewFrame) return <div>Loading…</div>
+    if (!previewFrame) {
+      return (
+        <div style={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: FONT,
+          color: V.txtSec,
+          fontSize: T.ui,
+        }}>
+          Loading…
+        </div>
+      )
+    }
 
     const isWide = (previewFrame.width ?? 0) >= 1200
     return (
@@ -1288,9 +1310,11 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
         background: isWide ? 'transparent' : 'oklch(94% 0.003 80)',
         overflow: 'auto',
       }}>
-        {'component' in previewFrame && (
-          <previewFrame.component {...(previewFrame.props ?? {})} />
-        )}
+        <FrameErrorBoundary frameId={previewFrame.id} title={previewFrame.title}>
+          {'component' in previewFrame && (
+            <previewFrame.component {...(previewFrame.props ?? {})} />
+          )}
+        </FrameErrorBoundary>
       </div>
     )
   }
