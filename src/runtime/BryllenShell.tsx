@@ -562,9 +562,11 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
       }
 
       // Create project annotation (without images in payload)
-      // Store in active project's db so the agent can find it with --project and the spinner shows
+      // Use the NEW project's name as projectId (not activeProject) so the agent can find it
+      // even when no project exists yet (empty folder / first project)
       const { images: _, ...projectPayload } = payload
-      const projectParam = activeProject?.project ? `?projectId=${encodeURIComponent(activeProject.project)}` : ''
+      const projectId = payload.name || activeProject?.project || ''
+      const projectParam = projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''
       const res = await fetch(`${annotationEndpoint}/annotations${projectParam}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
