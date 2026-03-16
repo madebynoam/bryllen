@@ -10,4 +10,6 @@ dist/
 .bryllen-update-requested
 .bryllen-update-result.json
 .bryllen-e2e-test
+.bryllen-e2e-visual
+.bryllen-e2e-visual-evidence
 .bryllen-test-tmp
