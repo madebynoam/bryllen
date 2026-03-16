@@ -47,7 +47,7 @@ Bryllen is a canvas for Claude Code design. An infinite, zoomable surface where 
 ```
 src/projects/<name>/
   v1/
-    tokens.css          ← OKLCH custom properties (.iter-v1 scope)
+    tokens.css          ← OKLCH custom properties (:root, .iter-v1 scope)
     components/
       index.ts          ← barrel export
     pages/
@@ -135,9 +135,24 @@ CORRECT (components first):
 
 **If you skip this and inline HTML, the designer cannot iterate on individual pieces.**
 
-## Token system
+## Token system (CRITICAL — frames render unstyled without :root)
 
-Each iteration owns a complete token set scoped under `.iter-v<N>`. No cascade across iterations. First iteration includes `:root` fallbacks. **All colors in OKLCH — no hex.**
+Each iteration owns a complete token set. **V1 tokens MUST use `:root, .iter-v1` as the selector** — without `:root`, frames render as unstyled plain text because they don't have the `.iter-v1` class wrapper. Later iterations (v2+) use only `.iter-v<N>`. No cascade across iterations. **All colors in OKLCH — no hex.**
+
+```css
+/* v1/tokens.css — CORRECT (both :root AND .iter-v1) */
+:root, .iter-v1 {
+  --primary: oklch(0.55 0.2 250);
+  --surface: oklch(0.98 0.003 80);
+  /* ... */
+}
+
+/* v2/tokens.css — only .iter-v2 */
+.iter-v2 {
+  --primary: oklch(0.55 0.2 250);
+  /* ... */
+}
+```
 
 ## Iterations
 
@@ -510,7 +525,7 @@ During ideation, multiple directions may have different component implementation
 3. Create project folder structure (v1/, manifest.ts, CHANGELOG.md)
 4. `node node_modules/bryllen/src/cli/index.js progress <id> "Planning components…"`
 5. **Run guard protocol**: identify ALL UI elements from the prompt
-6. Create tokens.css, ALL required components, mandatory pages (Tokens, Components)
+6. Create tokens.css (**MUST use `:root, .iter-v1` selector — without `:root`, frames are unstyled**), ALL required components, mandatory pages (Tokens, Components)
 7. `node node_modules/bryllen/src/cli/index.js progress <id> "Generating directions…"`
 8. Invoke `/design-taste`, generate initial frames (call `progress <id> "Creating direction N…"` before each)
 9. Resolve with `--navigate V1`

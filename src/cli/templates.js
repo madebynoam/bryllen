@@ -161,6 +161,7 @@ A page defines exactly one exported function. Any sub-component belongs in \\\`c
 - **Components use \\\`var(--token)\\\` only.** No hardcoded visual values.
 - **Pages import only from \\\`../components/\\\`.** No inline styled HTML.
 - **Components must be interactive.** Inputs typeable, buttons clickable, menus openable.
+- **V1 tokens.css MUST use \\\`:root, .iter-v1\\\` selector.** Without \\\`:root\\\`, frames render unstyled.
 
 ## Mandatory frames
 
