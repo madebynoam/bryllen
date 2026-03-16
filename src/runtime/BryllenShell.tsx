@@ -535,12 +535,16 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
 
   const activeProject: ProjectManifest | undefined = manifests[activeProjectIndex]
 
-  // Clear creating state once manifests appear (project was created, HMR picked it up)
+  // Clear creating state once the NEW project's manifest appears (HMR picked it up)
+  // Auto-switch to the new project so the designer sees it immediately
   useEffect(() => {
-    if (creatingProject && manifests.length > 0) {
+    if (!creatingProject) return
+    const newIndex = manifests.findIndex(m => m.project === creatingProject.name)
+    if (newIndex !== -1) {
+      setActiveProjectIndex(newIndex)
       setCreatingProject(null)
     }
-  }, [manifests.length, creatingProject])
+  }, [manifests, creatingProject])
 
   const handleNewProject = useCallback(async (payload: { name: string; description: string; prompt: string; images?: Array<{ id: string; dataUrl: string; filename: string }> }) => {
     try {
