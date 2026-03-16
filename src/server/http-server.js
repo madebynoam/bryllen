@@ -330,13 +330,19 @@ function deleteAnnotationById(projectName, id) {
 }
 
 function getPending(projectName) {
-  // No project specified — scan all project dirs and aggregate pending
+  // No project specified — scan all project dirs AND _global db to aggregate pending
   if (!projectName) {
     try {
+      const all = []
+      // Check _global db (new project annotations land here when no project exists yet)
+      try {
+        const globalDb = getAnnotationDb('')
+        const globalAnnotations = getProjectAnnotations(globalDb, 'pending')
+        all.push(...globalAnnotations.map(a => ({ ...a, project: '' })))
+      } catch { /* _global db may not exist yet */ }
       const dirs = readdirSync(PROJECTS_DIR).filter(f => {
         try { return statSync(join(PROJECTS_DIR, f)).isDirectory() && !f.startsWith('.') } catch { return false }
       })
-      const all = []
       for (const dir of dirs) {
         const db = getAnnotationDb(dir)
         const annotations = getProjectAnnotations(db, 'pending')
