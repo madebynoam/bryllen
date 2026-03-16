@@ -400,7 +400,7 @@ let updateInProgress = false
 
 // --- HTTP server ---
 
-const PORT = 4748
+const PORT = parseInt(process.env.BRYLLEN_HTTP_PORT || '4748', 10)
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {

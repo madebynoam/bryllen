@@ -9,3 +9,5 @@ dist/
 .bryllen-active-project
 .bryllen-update-requested
 .bryllen-update-result.json
+.bryllen-e2e-test
+.bryllen-test-tmp
