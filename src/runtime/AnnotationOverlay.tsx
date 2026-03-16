@@ -1025,7 +1025,7 @@ export function AnnotationOverlay({ endpoint, frames, showToast: externalToast, 
 
     // Append ideate instruction so agent sees it clearly
     const finalComment = annotationMode === 'ideate'
-      ? `${comment.trim()}\n\n---\n[IDEATE MODE: You MUST generate exactly ${variationCount} genuinely different variations. Each must be a distinct design direction — different layout, hierarchy, or approach. Not 1, not 2 — exactly ${variationCount}.]`
+      ? `${comment.trim()}\n\n---\n[IDEATE MODE: You MUST generate exactly ${variationCount} genuinely different variations as NEW frames. KEEP the original frame UNTOUCHED — do NOT modify or replace it. Add ${variationCount} new frames alongside the existing one. Each must be a distinct design direction — different layout, hierarchy, or approach.]`
       : comment.trim()
 
     const body = {
