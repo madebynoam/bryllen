@@ -391,8 +391,10 @@ describe('Visual E2E — New Project Renders Styled Frames', () => {
       console.error(`[PAGE ERROR] ${err.message}`)
     })
 
-    // Navigate to the app — use domcontentloaded because Vite HMR websocket prevents networkidle
+    // Suppress the welcome tour by setting localStorage before navigating
     await page.goto(VITE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    await page.evaluate(() => localStorage.setItem('bryllen:tour-completed', 'true'))
+    await page.reload({ waitUntil: 'domcontentloaded' })
 
     // Wait for React to mount and frames to render
     await page.waitForTimeout(5000)
