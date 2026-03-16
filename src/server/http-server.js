@@ -166,13 +166,18 @@ function addAnnotation(projectName, data) {
 
   // Immediate annotations skip draft — immediately unblock a waiter
   if (isImmediate) {
-    // Find waiter for this project (or any project if no project-specific waiter)
-    const waiterIdx = waiters.findIndex(w => !w.projectName || w.projectName === projectName)
+    // For 'project' type: notify ANY waiter regardless of project filter.
+    // New project annotations create a new projectId that no watcher is subscribed to,
+    // so we must broadcast to all waiters (the global watcher will pick it up).
+    const isNewProject = data.type === 'project'
+    const waiterIdx = waiters.findIndex(w =>
+      isNewProject ? true : (!w.projectName || w.projectName === projectName)
+    )
     if (waiterIdx !== -1) {
       const waiter = waiters.splice(waiterIdx, 1)[0]
       waiter.resolve(annotation)
     }
-    // Notify SSE clients for this project
+    // Notify SSE clients — project annotations broadcast to ALL clients
     let sseType
     if (data.type === 'project') sseType = 'project-pending'
     else if (data.type === 'prompt-request') sseType = 'prompt-requested'
@@ -180,7 +185,7 @@ function addAnnotation(projectName, data) {
     else if (data.type === 'pick') sseType = 'pick-pending'
     else sseType = 'iteration-pending'
     for (const client of sseClients) {
-      if (!client.projectName || client.projectName === projectName) {
+      if (isNewProject || !client.projectName || client.projectName === projectName) {
         client.res.write(`data: ${JSON.stringify({ type: sseType, id: annotation.id })}\n\n`)
       }
     }
@@ -395,7 +400,7 @@ let updateInProgress = false
 
 // --- HTTP server ---
 
-const PORT = 4748
+const PORT = parseInt(process.env.BRYLLEN_HTTP_PORT || '4748', 10)
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {

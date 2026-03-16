@@ -93,9 +93,10 @@ Start the Bryllen dev server and enter watch mode.
    **Project request arrives** (JSON has `type: 'project'`) — create a new project:
    1. Parse the JSON comment: `{ name, description, prompt }`
    2. Create the project folder structure: `src/projects/<name>/v1/{tokens.css, components/index.ts, pages/, context/}`
-   3. Create `manifest.ts` and `CHANGELOG.md`
-   4. If `prompt` is provided, follow the "What happens next" sequence from `/bryllen-new` **EXACTLY** — especially step 1 which REQUIRES generating 3-5 genuinely different design directions. The "All Directions" page must be the first thing the designer sees.
-   5. Run `npx bryllen resolve <id>`
+   3. **CRITICAL: tokens.css MUST use `:root, .iter-v1` as the selector** — without `:root`, frames render as unstyled plain text because they don't have the `.iter-v1` class wrapper. This is the #1 cause of "designs show unstyled text" bug.
+   4. Create `manifest.ts` (with `import './v1/tokens.css'` at the top) and `CHANGELOG.md`
+   5. If `prompt` is provided, follow the "What happens next" sequence from `/bryllen-new` **EXACTLY** — especially step 1 which REQUIRES generating 3-5 genuinely different design directions. The "All Directions" page must be the first thing the designer sees.
+   6. Run `npx bryllen resolve <id>`
    6. Run `npx bryllen watch` again — back to waiting
 
    **Share request arrives** (JSON has `type: 'share'`) — deploy to GitHub Pages:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.163 — Fix new project flow
+
+- **Fix: new project auto-switch** — Creating a second project no longer instantly clears the "creating" spinner. The UI now waits for the specific new project's manifest to appear via HMR, then auto-switches to it.
+- **Fix: new project annotation not picked up** — When the agent watches a specific project and a new project annotation arrives, the waiter is now always notified regardless of project filter. Previously, project-scoped watchers would miss new project annotations entirely.
+- **Tests: comprehensive integration tests** — Replaced all existing tests with 37 integration tests covering the full new project flow: DB frame CRUD, frame resolution, auto-registration, annotation isolation, Vite plugin discovery, and the fixes above.
+
 ## 0.0.159 — Full-width fluid preview in new tab
 
 - Preview mode ("Open in new tab") now renders components full-width and fluid instead of centered in a narrow box
