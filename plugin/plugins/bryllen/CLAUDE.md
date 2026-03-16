@@ -393,7 +393,8 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - Route visual changes through tokens (don't hardcode)
 - Result: updated component/token
 
-**Ideate mode** (generates new frames):
+**Ideate mode** (generates NEW frames — NEVER replaces existing ones):
+- **CRITICAL: Ideate is ADDITIVE.** The annotated frame (`frameId`) is the REFERENCE — do NOT modify, replace, or delete it. Create N brand-new frames ALONGSIDE the existing ones. The original frame stays exactly as it is.
 - `node node_modules/bryllen/src/cli/index.js progress <id> "Planning directions…"`
 - **Run guard protocol**: identify ALL UI elements needed for variations
 - **Create missing components** in v<N>/components/, add to barrel
@@ -403,8 +404,8 @@ Every annotation has a `mode` field: `'refine'`, `'ideate'`, or `'pick'`.
 - "Genuinely different" means different in **layout, hierarchy, interaction, or approach** — NOT just color or font variations
 - **LAY OUT FRAMES HORIZONTALLY** (increasing X, same Y) — see "Frame layout" section above
 - Each frame should be a distinct design bet, not a tweak of the same idea
-- The designer chose ideate because they WANT options to compare side-by-side
-- **For EACH new frame:** (1) create component file, (2) add to `manifest.components` — frames are auto-registered in DB on reload, no POST needed
+- The designer chose ideate because they WANT options to compare side-by-side — the original PLUS new variations
+- **For EACH new frame:** (1) create NEW component file (never overwrite the annotated frame's component), (2) add to `manifest.components` — frames are auto-registered in DB on reload, no POST needed
 - **After creating each variation frame, attach a sticky note** describing WHAT makes this direction different. Create it via POST /stickies:
   ```bash
   curl -s -X POST http://localhost:4748/stickies -H 'Content-Type: application/json' \
