@@ -103,7 +103,8 @@ function detectProject(args) {
 
 async function watchAnnotations() {
   const args = process.argv.slice(3)
-  let timeout = 15000
+  const stream = args.includes('--stream')
+  let timeout = stream ? 30000 : 15000
   const timeoutIdx = args.indexOf('--timeout')
   if (timeoutIdx !== -1 && args[timeoutIdx + 1]) {
     timeout = parseInt(args[timeoutIdx + 1], 10) * 1000
@@ -116,6 +117,28 @@ async function watchAnnotations() {
   const params = new URLSearchParams()
   params.set('timeout', String(timeout))
   if (project) params.set('projectId', project)
+
+  if (stream) {
+    // Stream mode (for Claude Code's Monitor tool): never exits on its own.
+    // One compact JSON line per annotation; timeouts are silent so each stdout
+    // line is a real event. Survives server restarts (bryllen update swaps
+    // ports — getHttpPort re-reads .bryllen-ports.json on every poll).
+    let downSince = null
+    while (true) {
+      try {
+        const result = await httpGet(`/annotations/next?${params}`)
+        downSince = null
+        if (!result.timeout) console.log(JSON.stringify(result))
+      } catch (err) {
+        downSince ??= Date.now()
+        if (Date.now() - downSince > 30000) {
+          console.log(JSON.stringify({ error: 'Bryllen server unreachable for 30s — stream ended', hint: 'Restart with /bryllen-design' }))
+          process.exit(1)
+        }
+        await new Promise(r => setTimeout(r, 2000))
+      }
+    }
+  }
 
   try {
     const result = await httpGet(`/annotations/next?${params}`)
@@ -958,6 +981,9 @@ switch (command) {
     console.log('Annotation commands (for Claude Code agent):')
     console.log('  bryllen watch [--timeout N] [--project <name>]')
     console.log('                               Wait for annotation (default 15s)')
+    console.log('  bryllen watch --stream [--project <name>]')
+    console.log('                               Stream annotations forever, one JSON line each')
+    console.log('                               (for Claude Code’s Monitor tool)')
     console.log('  bryllen resolve <id> [--navigate <iter>] [--project <name>]')
     console.log('                               Mark resolved, optionally navigate UI')
     console.log('  bryllen progress <id> <msg> [--project <name>]')

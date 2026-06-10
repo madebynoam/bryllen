@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.164 — Claude Code 2026 platform upgrades (round 1)
+
+- **`bryllen watch --stream`** — never exits; long-polls `/annotations/next` internally and prints one compact JSON line per annotation. Timeouts are silent; survives server restarts (2s retry, gives up with an error line after 30s down). Built for Claude Code's Monitor tool: each line wakes the agent, so the polling watch loop is gone.
+- **/bryllen-design arms the stream via the Monitor tool** (`persistent: true`) instead of looping `npx bryllen watch`; the agent stays free to chat between annotations. Poll loop kept as fallback for harnesses without Monitor.
+- **SessionStart hook** (plugin) — sessions opened inside a Bryllen workspace get canvas state injected as context: server running or not, vite port, project list.
+- **`direction-generator` plugin agent + parallel directions** — `/bryllen-new` now fans out one subagent per design direction, all concurrent, each blind to its siblings (genuinely different directions, faster wall-clock). Conflict-free protocol: subagents write only slug-prefixed components and their own page; the main agent wires `components/index.ts` and `manifest.ts` after all return.
+- `disallowed-tools: WebSearch` on /bryllen-design to keep watch mode focused.
+- Roadmap: `docs/UPGRADES-2026.md` — research synthesis and next rounds (design-system grounding, Agent SDK headless mode, model/effort routing, annotate-mode upgrades).
+
 ## 0.0.163 — Fix new project flow
 
 - **Fix: new project auto-switch** — Creating a second project no longer instantly clears the "creating" spinner. The UI now waits for the specific new project's manifest to appear via HMR, then auto-switches to it.

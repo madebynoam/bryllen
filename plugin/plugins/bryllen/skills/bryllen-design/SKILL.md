@@ -1,11 +1,12 @@
 ---
 name: bryllen-design
 description: Start (or restart) the Bryllen dev server
+disallowed-tools: WebSearch
 ---
 
 # /bryllen-design
 
-Start the Bryllen dev server and enter watch mode.
+Start the Bryllen dev server and arm the annotation stream.
 
 ## Steps
 
@@ -35,7 +36,7 @@ Start the Bryllen dev server and enter watch mode.
    ```bash
    ls src/projects/ 2>/dev/null
    ```
-   - If the directory is empty or missing: tell the designer **"Canvas is live at http://localhost:5173 — click 'New Project' to start designing"** and go straight to step 6 (watch loop). The watch loop already handles the `type: 'project'` annotation that the New Project dialog sends.
+   - If the directory is empty or missing: tell the designer **"Canvas is live at http://localhost:5173 — click 'New Project' to start designing"** and go straight to step 6 (arm the stream). The annotation handlers already cover the `type: 'project'` annotation that the New Project dialog sends.
    - If projects exist: continue to step 4 (drain backlog).
 
 4. **Drain backlog:** Run `npx bryllen pending` to check for annotations that arrived before the session started. Process each one following the guard protocol.
@@ -46,7 +47,16 @@ Start the Bryllen dev server and enter watch mode.
    ```
    This returns paths to inspiration images. Read them with the Read tool and analyze via Vision. Incorporate their style into your generations.
 
-6. **Enter watch loop:** Run `npx bryllen watch` in a loop. Each call waits up to 15 seconds for the designer to click "Apply" on an annotation. Three outcomes:
+6. **Arm the annotation stream** with the **Monitor tool**:
+   - `command`: `npx bryllen watch --stream`
+   - `persistent`: `true`
+   - `description`: `Bryllen canvas annotations`
+
+   The stream prints one compact JSON line per annotation; each line arrives as a notification that wakes you. Between annotations you are free — no polling loop, and the designer can chat with you while the stream is armed. Monitor notifications are canvas events, not user replies. If the stream emits a `server unreachable` error line (or the monitor exits), the dev server died: restart it (steps 1–2) and re-arm the Monitor.
+
+   **Fallback — only if the Monitor tool is unavailable in this harness:** run `npx bryllen watch` in a loop. Each call waits up to 15 seconds and prints either an annotation or `{"timeout": true}`; on timeout, run it again.
+
+   When an annotation arrives, process it by type:
 
    **Regular annotation arrives** (JSON with annotation data) — process it:
 
@@ -73,7 +83,7 @@ Start the Bryllen dev server and enter watch mode.
      - If clean: proceed
    - Run `npx bryllen resolve <id>` (this auto-commits project changes)
    - Log the change to `CHANGELOG.md`
-   - Run `npx bryllen watch` again — back to waiting
+   - Done — the Monitor stays armed for the next annotation (poll fallback: run `npx bryllen watch` again)
 
    **Iteration request arrives** (JSON has `type: 'iteration'`) — run the iteration protocol:
    1. Read `manifest.ts`, find the active iteration (last with `frozen: false`)
@@ -88,7 +98,7 @@ Start the Bryllen dev server and enter watch mode.
       - Fix any visual issues before resolving
    9. Run `npx bryllen resolve <id>` (this auto-commits project changes)
    10. Log to `CHANGELOG.md`
-   - Run `npx bryllen watch` again — back to waiting
+   - Done — the Monitor stays armed for the next annotation (poll fallback: run `npx bryllen watch` again)
 
    **Project request arrives** (JSON has `type: 'project'`) — create a new project:
    1. Parse the JSON comment: `{ name, description, prompt }`
@@ -97,7 +107,7 @@ Start the Bryllen dev server and enter watch mode.
    4. Create `manifest.ts` (with `import './v1/tokens.css'` at the top) and `CHANGELOG.md`
    5. If `prompt` is provided, follow the "What happens next" sequence from `/bryllen-new` **EXACTLY** — especially step 1 which REQUIRES generating 3-5 genuinely different design directions. The "All Directions" page must be the first thing the designer sees.
    6. Run `npx bryllen resolve <id>`
-   6. Run `npx bryllen watch` again — back to waiting
+   6. Done — the Monitor stays armed for the next annotation (poll fallback: run `npx bryllen watch` again)
 
    **Share request arrives** (JSON has `type: 'share'`) — deploy to GitHub Pages:
    1. Parse the JSON comment: `{ project: '<name>' }`
@@ -111,7 +121,7 @@ Start the Bryllen dev server and enter watch mode.
    5. Run `npx bryllen progress <id> "Building project..."`
    6. Invoke `/bryllen-share <project-name>` — this handles build, deploy, and URL writing
    7. Run `npx bryllen resolve <id>`
-   8. Run `npx bryllen watch` again — back to waiting
+   8. Done — the Monitor stays armed for the next annotation (poll fallback: run `npx bryllen watch` again)
 
    **Pick request arrives** (JSON has `type: 'pick'`) — promote the picked direction(s) to a new iteration:
    1. Read the `frameId`, `frameIds`, and `comment` from the annotation
@@ -133,7 +143,7 @@ Start the Bryllen dev server and enter watch mode.
    8. Run `npx bryllen screenshot` to verify the result
    9. Run `npx bryllen resolve <id>` (auto-commits)
    10. Log to `CHANGELOG.md`
-   - Run `npx bryllen watch` again — back to waiting
+   - Done — the Monitor stays armed for the next annotation (poll fallback: run `npx bryllen watch` again)
 
    **Multi-pick strategy:**
    When the designer selects multiple frames, they want to combine strengths from each:
@@ -148,16 +158,19 @@ Start the Bryllen dev server and enter watch mode.
    - Apply the designer's comment (e.g., "use these colors", "make more like this")
    - Reference specific visual elements from the context images when generating
 
-   **Timeout** (JSON contains `"timeout": true`) — no annotation arrived. Run `npx bryllen watch` again to keep waiting. The timeout exists so you stay responsive to designer messages between polls.
+   **Timeout** (JSON contains `"timeout": true`) — poll-fallback mode only; the stream never prints timeouts. No annotation arrived: run `npx bryllen watch` again to keep waiting.
 
-7. **Chat while watching:** The designer can send messages at any time — you'll see them between `watch` calls. Handle the message (answer a question, make a change, kill the server, etc.), then resume the watch loop by running `npx bryllen watch` again.
+7. **Chat while watching:** The designer can send messages at any time — the armed Monitor doesn't block the conversation. Handle the message (answer a question, make a change, kill the server, etc.); the stream keeps delivering annotations as they arrive. If you stopped the monitor (e.g. via /bryllen-close), re-arm it as in step 6.
 
 ## CLI Commands Reference
 
 All annotation commands output JSON for easy parsing:
 
 ```bash
-# Wait for next annotation (15s default timeout)
+# Stream annotations forever — one JSON line each (use with the Monitor tool)
+npx bryllen watch --stream
+
+# Wait for next annotation once (15s default timeout, poll fallback)
 npx bryllen watch [--timeout N]
 
 # Mark annotation as resolved (auto-commits)

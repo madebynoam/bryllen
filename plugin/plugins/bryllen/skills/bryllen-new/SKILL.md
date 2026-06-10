@@ -88,16 +88,24 @@ After init, the designer describes what they want. The agent follows this exact 
    - **NOT genuinely different:** same layout with different colors, same hierarchy with different fonts
    - The designer will pick one — only then do you build out variations/states
 
-2. **Populate tokens** — Write the complete OKLCH token set in `v1/tokens.css`, scoped under `:root, .iter-v1`. Derive colors from the OKLCH palette defined in CLAUDE.md. If context images are present, extract colors from them. Every visual value (color, background, border, shadow) must be a CSS custom property. No hex values.
+2. **Populate tokens** — Write the complete OKLCH token set in `v1/tokens.css`, scoped under `:root, .iter-v1`. Derive colors from the OKLCH palette defined in CLAUDE.md. If context images are present, extract colors from them. Every visual value (color, background, border, shadow) must be a CSS custom property. No hex values. Tokens come FIRST — the direction subagents in the next step read this file and may only use values from it.
 
-3. **Create components for ALL directions** — build each component in `v1/components/`. Components use ONLY `var(--token)` for visual values — no hardcoded colors, sizes, or spacing. Export every component from `v1/components/index.ts`.
+3. **FAN OUT DIRECTION SUBAGENTS (PARALLEL)** — build the directions concurrently, one subagent each. Spawn one `direction-generator` agent (bundled in this plugin) per direction using the Agent tool, **all in a single message** so they run in parallel. Each agent is blind to its siblings — that is the point: directions stay genuinely different because they don't anchor on each other. Each prompt must include:
+   - The absolute project path (`src/projects/<name>/`) and that tokens live in `v1/tokens.css`
+   - The direction's name, slug (e.g. `DirA`), and brief — the layout/hierarchy/interaction bet from step 1 that makes it different
+   - Context image paths from step 0, if any
+   - The conflict rule (also enforced by the agent definition): new component files only, prefixed with the slug; one page `v1/pages/<Slug>.tsx`; never touch `tokens.css`, `manifest.ts`, `components/index.ts`, or `CHANGELOG.md`
 
-4. **Create pages** — each direction gets its own page file in `v1/pages/` (e.g., `DirA.tsx`, `DirB.tsx`). Pages import ONLY from `../components/`. Also create two mandatory utility pages:
+   Each subagent returns its slug, page path, and component list.
+
+   **Fallback** — if the `direction-generator` agent type is unavailable, build the directions yourself sequentially, following the same file rules.
+
+4. **Create the utility pages yourself (main agent)** — while or after the subagents run:
    - **Tokens page** — renders color swatches using `TokenSwatch` from `bryllen/runtime`, typography scale, and spacing grid.
-   - **Components page** — shows all building blocks individually.
+   - **Components page** — shows all building blocks individually (write it after the subagents return, so it covers their components).
    - **DO NOT create an "AllDirectionsPage" component.** Each direction is its own separate canvas frame — the canvas itself IS the "all directions" view.
 
-5. **Update the manifest** — Add each component to the `components` map. **Frames are auto-registered** — the runtime detects new components and creates frame records automatically on reload. No POST /frames needed.
+5. **Wire it up (main agent, after ALL subagents return)** — export every new component from `v1/components/index.ts`, then update the manifest: import each direction page and add it to the `components` map along with the utility pages. **Frames are auto-registered** — the runtime detects new components and creates frame records automatically on reload. No POST /frames needed.
 
    ```ts
    import './v1/tokens.css'
@@ -116,7 +124,7 @@ After init, the designer describes what they want. The agent follows this exact 
 
 6. **Log to CHANGELOG.md** — record the design directions and why each is different
 
-7. **Enter watch mode** — run `npx bryllen watch` to start listening for designer annotations. This is critical — the designer should be able to click and annotate immediately without running any commands.
+7. **Arm the annotation stream** — use the Monitor tool with `command: npx bryllen watch --stream`, `persistent: true` (see /bryllen-design step 6; fall back to looping `npx bryllen watch` if Monitor is unavailable). This is critical — the designer should be able to click and annotate immediately without running any commands.
 
 The full token system, design language, component hierarchy, and guard protocol are defined in CLAUDE.md — those rules apply to every file the agent creates.
 
