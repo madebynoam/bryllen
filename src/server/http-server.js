@@ -77,10 +77,17 @@ async function getPage() {
   _browser = await chromium.launch({ headless: true })
   _page = await _browser.newPage()
   await _page.setViewportSize({ width: 1920, height: 1080 })
-  await _page.goto('http://localhost:5173', { waitUntil: 'load' })
-  await _page.waitForSelector('[data-frame-id]', { timeout: 15000 })
+  // Dismiss the tour before any navigation — fresh headless profiles would
+  // otherwise show the tour overlay. No warmup goto: each screenshot request
+  // navigates to its own target (the old root-URL warmup waited for canvas
+  // frames that never render in a fresh profile on multi-project workspaces).
+  await _page.addInitScript(() => {
+    try { localStorage.setItem('bryllen:tour-completed', 'true') } catch {}
+  })
   return _page
 }
+
+const VITE_BASE = `http://localhost:${process.env.CANVAI_VITE_PORT || 5173}`
 
 function closeBrowser() {
   if (_browser) {
@@ -1186,10 +1193,11 @@ const httpServer = createServer(async (req, res) => {
       const iterationName = url.searchParams.get('iteration')
       const pageName = url.searchParams.get('page')
       const delay = Number(url.searchParams.get('delay')) || 500
+      const inline = url.searchParams.get('inline') === '1'
 
       try {
         // Build URL with routing params
-        let targetUrl = 'http://localhost:5173'
+        let targetUrl = VITE_BASE
         if (projectName) {
           targetUrl += '/' + encodeURIComponent(projectName)
           if (iterationName) {
@@ -1199,19 +1207,6 @@ const httpServer = createServer(async (req, res) => {
             }
           }
         }
-
-        // Navigate to the target URL
-        await page.goto(targetUrl, { waitUntil: 'load' })
-
-        // Dismiss tour overlay for clean screenshots
-        await page.evaluate(() => {
-          localStorage.setItem('bryllen:tour-completed', 'true')
-        })
-        // Reload to apply the tour dismissal
-        await page.reload({ waitUntil: 'load' })
-
-        await new Promise(r => setTimeout(r, delay))
-        await page.waitForSelector('[data-frame-id]', { timeout: 10000 })
 
         // Ensure screenshots directory exists
         const storeIsDir = existsSync(STORE_DIR) && statSync(STORE_DIR).isDirectory()
@@ -1224,8 +1219,32 @@ const httpServer = createServer(async (req, res) => {
         const filename = `${timestamp}.png`
         const filepath = join(screenshotDir, filename)
 
-        if (frameId) {
-          // Frame mode — screenshot a specific frame's content
+        if (frameId && projectName) {
+          // Frame mode — render the frame standalone via preview mode. No
+          // canvas involved: works in fresh headless profiles and
+          // multi-project workspaces, and honors the frame's componentKey+props.
+          const dbFrame = getFrame(projectName, frameId)
+          await page.setViewportSize({ width: dbFrame?.width || 1440, height: dbFrame?.height || 900 })
+          await page.goto(`${VITE_BASE}/${encodeURIComponent(projectName)}?preview=${encodeURIComponent(frameId)}`, { waitUntil: 'load' })
+          const ready = await page.waitForSelector('[data-preview-ready]', { timeout: 15000 }).catch(() => null)
+          if (!ready) {
+            const available = getFrames(projectName).map(f => f.id)
+            sendJson(res, 404, { error: `Frame "${frameId}" did not render in preview mode`, available })
+            return
+          }
+          await new Promise(r => setTimeout(r, delay))
+          const buffer = await ready.screenshot(inline ? {} : { path: filepath })
+          if (inline) {
+            res.writeHead(200, { 'Content-Type': 'image/png', 'Access-Control-Allow-Origin': '*' })
+            res.end(buffer)
+            return
+          }
+        } else if (frameId) {
+          // Frame mode without a project — fall back to the canvas page
+          await page.setViewportSize({ width: 1920, height: 1080 })
+          await page.goto(targetUrl, { waitUntil: 'load' })
+          await new Promise(r => setTimeout(r, delay))
+          await page.waitForSelector('[data-frame-id]', { timeout: 10000 })
           await page.evaluate(() => window.__bryllen?.fitToView())
           await new Promise(r => setTimeout(r, 300))
 
@@ -1238,6 +1257,10 @@ const httpServer = createServer(async (req, res) => {
           }
           await frameContent.screenshot({ path: filepath })
         } else {
+          await page.setViewportSize({ width: 1920, height: 1080 })
+          await page.goto(targetUrl, { waitUntil: 'load' })
+          await new Promise(r => setTimeout(r, delay))
+          await page.waitForSelector('[data-frame-id]', { timeout: 10000 })
           // Page mode — fit all frames into view, screenshot canvas content
           await page.evaluate(() => window.__bryllen?.fitToView())
           await new Promise(r => setTimeout(r, 300))

@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.0.165",
+    "title": "Stream mode dedupe",
+    "changes": [
+      "Fix: watch --stream flooded duplicates — /annotations/next keeps returning the oldest pending annotation until it's resolved, so the stream re-emitted it in a hot loop. Stream now emits each annotation once (keyed by project+id) and idles 2s between polls while it stays pending."
+    ]
+  },
+  {
     "version": "0.0.164",
     "title": "Claude Code 2026 platform upgrades (round 1)",
     "changes": [

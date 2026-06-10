@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { useCanvas } from './Canvas'
-import { Star, Check, X, MoreHorizontal, ExternalLink, Copy, Trash2 } from 'lucide-react'
+import { Star, Check, X, MoreHorizontal, ExternalLink, Copy, Camera, Trash2 } from 'lucide-react'
 import { T, R, V, FONT } from './tokens'
 import type { FrameStatus } from './types'
 
@@ -24,6 +24,7 @@ interface FrameProps {
   onDelete?: (id: string) => void
   onDuplicateClick?: (id: string) => void
   onOpenInNewTab?: (id: string) => void
+  onCopyAsPng?: (id: string) => Promise<void> | void
 }
 
 const STATUS_ICONS: Record<FrameStatus, { icon: typeof Star; fill: string; stroke: string }> = {
@@ -77,7 +78,7 @@ function MenuSeparator() {
   return <div style={{ height: 1, background: V.border, margin: '4px 0' }} />
 }
 
-export function Frame({ id, title, x, y, width, height, children, onMove, onDuplicate, onResize, status = 'none', onStatusChange, selected = false, onSelect, onDelete, onDuplicateClick, onOpenInNewTab }: FrameProps) {
+export function Frame({ id, title, x, y, width, height, children, onMove, onDuplicate, onResize, status = 'none', onStatusChange, selected = false, onSelect, onDelete, onDuplicateClick, onOpenInNewTab, onCopyAsPng }: FrameProps) {
   const { zoom } = useCanvas()
   const frameRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -95,6 +96,7 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false)
+  const [copyPngLabel, setCopyPngLabel] = useState('Copy as PNG')
   const [moreDropdownPos, setMoreDropdownPos] = useState({ top: 0, left: 0 })
 
   onMoveRef.current = onMove
@@ -384,6 +386,27 @@ export function Frame({ id, title, x, y, width, height, children, onMove, onDupl
                     fill="none"
                     stroke="#999"
                     label="Open in new tab"
+                  />
+                )}
+                {onCopyAsPng && (
+                  <DropdownItem
+                    onClick={async () => {
+                      setCopyPngLabel('Copying…')
+                      try {
+                        await onCopyAsPng(id)
+                        setCopyPngLabel('Copied!')
+                      } catch {
+                        setCopyPngLabel('Copy failed')
+                      }
+                      setTimeout(() => {
+                        setMoreDropdownOpen(false)
+                        setCopyPngLabel('Copy as PNG')
+                      }, 900)
+                    }}
+                    icon={Camera}
+                    fill="none"
+                    stroke="#999"
+                    label={copyPngLabel}
                   />
                 )}
                 {onDuplicateClick && (

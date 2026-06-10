@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.166 — Copy as PNG + preview-mode frame resolution
+
+- **New: Copy as PNG** in the frame menu — the server renders the frame standalone via Playwright and the PNG lands on the clipboard (menu shows Copying… → Copied!)
+- **Fix: "Open in new tab" broke for custom frames** (e.g. `v3-new-agency`) — preview mode only matched manifest component keys. It now falls back to the frames DB and renders the frame's `componentKey` with its `props`
+- **Fix: agent screenshots in multi-project workspaces** — `getPage()` waited for canvas frames at the root URL in a fresh headless profile and always timed out. Frame screenshots now render through preview mode (no canvas), honor the frame's stored width/height, and the vite port is no longer hardcoded
+- New `inline=1` param on `/screenshot` returns raw PNG bytes (used by Copy as PNG)
+
 ## 0.0.165 — Stream mode dedupe
 
 - **Fix: `watch --stream` flooded duplicates** — `/annotations/next` keeps returning the oldest pending annotation until it's resolved, so the stream re-emitted it in a hot loop. Stream now emits each annotation once (keyed by project+id) and idles 2s between polls while it stays pending.

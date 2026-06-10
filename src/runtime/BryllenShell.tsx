@@ -29,9 +29,36 @@ interface BryllenShellProps {
   annotationEndpoint?: string
 }
 
-/** Lightweight preview mode — resolves component directly from manifest */
-function PreviewMode({ manifest }: { manifest: ProjectManifest }) {
+/** Resolve a preview target against manifest components: exact key, then normalized key match */
+function resolvePreviewComponent(
+  components: Record<string, React.ComponentType<any>>,
+  key: string,
+): { component: React.ComponentType<any>; title: string } | null {
+  if (components[key]) return { component: components[key], title: key }
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  for (const k of Object.keys(components)) {
+    const keyNorm = k.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    if (keyNorm === normalized || keyNorm === key) {
+      return { component: components[k], title: k }
+    }
+  }
+  return null
+}
+
+type PreviewDbFrame = { componentKey: string | null; props: Record<string, unknown>; title: string }
+
+/** Lightweight preview mode — resolves a component key directly, or a DB frame (componentKey + props) */
+function PreviewMode({ manifest, endpoint }: { manifest: ProjectManifest; endpoint: string }) {
   const previewId = new URLSearchParams(window.location.search).get('preview')
+  const components = manifest.components ?? {}
+
+  const direct = previewId ? resolvePreviewComponent(components, previewId) : null
+
+  // Frames created with custom ids (e.g. `v3-new-agency`) aren't component keys —
+  // their componentKey + props live in the frames DB. Look the frame up by id.
+  const [dbFrame, setDbFrame] = useState<PreviewDbFrame | 'loading' | 'notfound'>(
+    previewId && !direct ? 'loading' : 'notfound',
+  )
 
   // Override root overflow:hidden so the preview can scroll.
   // Appended to document.body so it always comes after <head> stylesheets in cascade order.
@@ -43,22 +70,37 @@ function PreviewMode({ manifest }: { manifest: ProjectManifest }) {
     return () => { style.remove() }
   }, [])
 
+  useEffect(() => {
+    if (!previewId || direct) return
+    let cancelled = false
+    fetch(`${endpoint}/frames?project=${encodeURIComponent(manifest.project)}`)
+      .then(r => r.json())
+      .then((frames) => {
+        if (cancelled) return
+        const f = Array.isArray(frames) ? frames.find((fr: any) => fr.id === previewId) : null
+        setDbFrame(f
+          ? { componentKey: f.componentKey ?? null, props: f.props ?? {}, title: f.title || previewId }
+          : 'notfound')
+      })
+      .catch(() => { if (!cancelled) setDbFrame('notfound') })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewId, manifest.project, endpoint])
+
   if (!previewId) return null
 
-  const components = manifest.components ?? {}
-
-  // Find component: try exact key, then normalized key match
-  let Comp: React.ComponentType<any> | null = components[previewId] ?? null
-  let title = previewId
+  let Comp: React.ComponentType<any> | null = direct?.component ?? null
+  let title = direct?.title ?? previewId
+  let props: Record<string, unknown> = {}
 
   if (!Comp) {
-    const normalized = previewId.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    for (const key of Object.keys(components)) {
-      const keyNorm = key.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      if (keyNorm === normalized || keyNorm === previewId) {
-        Comp = components[key]
-        title = key
-        break
+    if (dbFrame === 'loading') return null // frame record still resolving
+    if (dbFrame !== 'notfound' && dbFrame.componentKey) {
+      const viaFrame = resolvePreviewComponent(components, dbFrame.componentKey)
+      if (viaFrame) {
+        Comp = viaFrame.component
+        title = dbFrame.title
+        props = dbFrame.props
       }
     }
   }
@@ -67,19 +109,19 @@ function PreviewMode({ manifest }: { manifest: ProjectManifest }) {
     return (
       <div style={{ padding: 40, fontFamily: 'monospace', fontSize: 13, color: '#c00' }}>
         <strong>Preview error</strong><br />
-        Component &quot;{previewId}&quot; not found.<br />
-        Available: {Object.keys(components).join(', ') || '(none)'}
+        No component or frame named &quot;{previewId}&quot; found.<br />
+        Available components: {Object.keys(components).join(', ') || '(none)'}
       </div>
     )
   }
 
   return (
-    <div style={{
+    <div data-preview-ready style={{
       width: '100%', minHeight: '100vh',
       overflow: 'auto',
     }}>
       <FrameErrorBoundary frameId={previewId} title={title}>
-        <Comp />
+        <Comp {...props} />
       </FrameErrorBoundary>
     </div>
   )
@@ -445,7 +487,7 @@ export function BryllenShell({ manifests, annotationEndpoint = 'http://localhost
   const initialProject = manifests[initialProjectIndex]?.project ?? ''
 
   if (previewId && manifests[initialProjectIndex]) {
-    return <PreviewMode manifest={manifests[initialProjectIndex]} />
+    return <PreviewMode manifest={manifests[initialProjectIndex]} endpoint={annotationEndpoint} />
   }
 
   return (
@@ -892,6 +934,19 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
     const newX = source.x + (source.width ?? 320) + 40
     duplicateFrame(source, newX, source.y)
   }, [frames, duplicateFrame])
+
+  // Copy a frame as PNG to the clipboard. The server renders the frame
+  // standalone (preview mode) via Playwright and returns the PNG bytes;
+  // the ClipboardItem promise form keeps the user-gesture context valid.
+  const handleCopyAsPng = useCallback(async (id: string) => {
+    if (!activeProject?.project) throw new Error('No active project')
+    const url = `${annotationEndpoint}/screenshot?frame=${encodeURIComponent(id)}&project=${encodeURIComponent(activeProject.project)}&inline=1`
+    const blobPromise = fetch(url).then(async r => {
+      if (!r.ok) throw new Error(`Screenshot failed (${r.status})`)
+      return r.blob()
+    })
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
+  }, [activeProject?.project, annotationEndpoint])
 
   // Open frame in new tab (preview mode)
   // Uses a temporary <a> element instead of window.open to avoid popup blockers
@@ -1419,6 +1474,7 @@ function BryllenShellInner({ manifests, annotationEndpoint, urlState }: BryllenS
                   onDelete={removeFrame}
                   onDuplicateClick={handleDuplicateFromMenu}
                   onOpenInNewTab={handleOpenInNewTab}
+                  onCopyAsPng={handleCopyAsPng}
                 >
                   <FrameErrorBoundary frameId={frame.id} title={frame.title}>
                     {'component' in frame && <frame.component {...(frame.props ?? {})} />}
