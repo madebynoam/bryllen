@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.165 — Stream mode dedupe
+
+- **Fix: `watch --stream` flooded duplicates** — `/annotations/next` keeps returning the oldest pending annotation until it's resolved, so the stream re-emitted it in a hot loop. Stream now emits each annotation once (keyed by project+id) and idles 2s between polls while it stays pending.
+
 ## 0.0.164 — Claude Code 2026 platform upgrades (round 1)
 
 - **`bryllen watch --stream`** — never exits; long-polls `/annotations/next` internally and prints one compact JSON line per annotation. Timeouts are silent; survives server restarts (2s retry, gives up with an error line after 30s down). Built for Claude Code's Monitor tool: each line wakes the agent, so the polling watch loop is gone.

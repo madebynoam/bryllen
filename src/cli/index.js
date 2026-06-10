@@ -123,12 +123,26 @@ async function watchAnnotations() {
     // One compact JSON line per annotation; timeouts are silent so each stdout
     // line is a real event. Survives server restarts (bryllen update swaps
     // ports — getHttpPort re-reads .bryllen-ports.json on every poll).
+    //
+    // /annotations/next returns the oldest PENDING annotation — it keeps
+    // returning the same one until the agent resolves it. Emit each annotation
+    // once and idle between polls while it stays pending, otherwise the stream
+    // floods with duplicates and hammers the server in a hot loop.
+    const emitted = new Set()
     let downSince = null
     while (true) {
       try {
         const result = await httpGet(`/annotations/next?${params}`)
         downSince = null
-        if (!result.timeout) console.log(JSON.stringify(result))
+        if (!result.timeout) {
+          const key = `${result.project || ''}:${result.id}`
+          if (!emitted.has(key)) {
+            emitted.add(key)
+            console.log(JSON.stringify(result))
+          } else {
+            await new Promise(r => setTimeout(r, 2000))
+          }
+        }
       } catch (err) {
         downSince ??= Date.now()
         if (Date.now() - downSince > 30000) {
