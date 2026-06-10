@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:smoke": "bash scripts/smoke-test.sh",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
